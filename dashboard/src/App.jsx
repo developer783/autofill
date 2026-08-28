@@ -10,10 +10,19 @@ export default function App() {
   const [message, setMessage] = useState('');
 
   const getEndpoint = (path) => {
-    let base = (apiUrl || import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com').trim().replace(/\/+$/, '');
-    if (!base.startsWith('http://') && !base.startsWith('https://')) {
-      base = `https://${base}`;
+    let raw = (apiUrl || import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com').trim();
+    if (!raw) raw = 'https://smart-autofill-api.onrender.com';
+    
+    // Auto-append .onrender.com if given a short service name without domain
+    if (!raw.includes('.') && !raw.includes('localhost') && !raw.includes('127.0.0.1')) {
+      raw = `${raw}.onrender.com`;
     }
+    
+    if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
+      raw = `https://${raw}`;
+    }
+    
+    const base = raw.replace(/\/+$/, '');
     const cleanPath = path.startsWith('/api') ? path.substring(4) : path;
     return `${base}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
   };
