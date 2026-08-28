@@ -1,0 +1,36 @@
+services:
+  # 1. FastAPI Backend Web Service (API Key & Server URL)
+  - type: web
+    name: smart-autofill-api
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-autofill-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: STORAGE_PROVIDER
+        value: local
+
+  # 2. React Dashboard Static Site
+  - type: static
+    name: smart-autofill-dashboard
+    buildCommand: cd dashboard && npm install && npm run build
+    staticPublishPath: ./dashboard/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: smart-autofill-api
+          property: url
+
+databases:
+  # 3. PostgreSQL Database
+  - name: smart-autofill-db
+    databaseName: autofill
+    user: autofill_user
