@@ -28,7 +28,7 @@ services:
         fromService:
           type: web
           name: smart-autofill-api
-          property: url
+          property: host
 
 databases:
   # 3. PostgreSQL Database
