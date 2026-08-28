@@ -18,8 +18,9 @@ services:
         value: local
 
   # 2. React Dashboard Static Site
-  - type: static
+  - type: web
     name: smart-autofill-dashboard
+    env: static
     buildCommand: cd dashboard && npm install && npm run build
     staticPublishPath: ./dashboard/dist
     envVars:
