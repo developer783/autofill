@@ -2,12 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Plus, Save, Trash2, FileText, Upload, Check, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [apiUrl, setApiUrl] = useState('http://localhost:8000');
+  const [apiUrl, setApiUrl] = useState(import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com');
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+
+  const getEndpoint = (path) => {
+    let base = (apiUrl || import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com').trim().replace(/\/+$/, '');
+    if (!base.startsWith('http://') && !base.startsWith('https://')) {
+      base = `https://${base}`;
+    }
+    const cleanPath = path.startsWith('/api') ? path.substring(4) : path;
+    return `${base}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+  };
 
   // Single-Page Form State (All fields optional for Partial Save Rule)
   const [formData, setFormData] = useState({
@@ -64,7 +73,7 @@ export default function App() {
 
   const fetchApiKeys = async () => {
     try {
-      const res = await fetch('/api/api-keys');
+      const res = await fetch(getEndpoint('/api-keys'));
       if (res.ok) {
         const data = await res.json();
         setApiKeys(data);
@@ -76,7 +85,7 @@ export default function App() {
 
   const handleGenerateApiKey = async () => {
     try {
-      const res = await fetch('/api/api-keys', {
+      const res = await fetch(getEndpoint('/api-keys'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: keyName || 'Extension Key' })
@@ -93,7 +102,7 @@ export default function App() {
 
   const handleRevokeApiKey = async (keyId) => {
     try {
-      const res = await fetch(`/api/api-keys/${keyId}`, { method: 'DELETE' });
+      const res = await fetch(getEndpoint(`/api-keys/${keyId}`), { method: 'DELETE' });
       if (res.ok) {
         fetchApiKeys();
       }
@@ -105,7 +114,7 @@ export default function App() {
   const fetchProfiles = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/profiles');
+      const res = await fetch(getEndpoint('/profiles'));
       if (res.ok) {
         const data = await res.json();
         setProfiles(data);
@@ -123,13 +132,13 @@ export default function App() {
   useEffect(() => {
     fetchProfiles();
     fetchApiKeys();
-  }, []);
+  }, [apiUrl]);
 
   const loadProfile = async (id) => {
     setActiveProfileId(id);
     setMessage('');
     try {
-      const res = await fetch(`/api/profiles/${id}`);
+      const res = await fetch(getEndpoint(`/profiles/${id}`));
       if (res.ok) {
         const data = await res.json();
         const dt = data.details || {};
@@ -189,7 +198,7 @@ export default function App() {
   const handleCreateNewProfile = async () => {
     setMessage('Creating new candidate profile...');
     try {
-      const res = await fetch('/api/profiles', {
+      const res = await fetch(getEndpoint('/profiles'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ candidate_display_name: 'New Candidate' })
@@ -238,7 +247,7 @@ export default function App() {
         education: formData.education
       };
 
-      const res = await fetch(`/api/profiles/${activeProfileId}`, {
+      const res = await fetch(getEndpoint(`/profiles/${activeProfileId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -262,7 +271,7 @@ export default function App() {
     if (!window.confirm(`Are you sure you want to delete profile ${formData.profile_slug}?`)) return;
 
     try {
-      const res = await fetch(`/api/profiles/${activeProfileId}`, { method: 'DELETE' });
+      const res = await fetch(getEndpoint(`/profiles/${activeProfileId}`), { method: 'DELETE' });
       if (res.ok) {
         setMessage(`Profile ${formData.profile_slug} deleted.`);
         setActiveProfileId(null);
@@ -282,7 +291,7 @@ export default function App() {
     data.append('file', file);
 
     try {
-      const res = await fetch(`/api/profiles/${activeProfileId}/files`, {
+      const res = await fetch(getEndpoint(`/profiles/${activeProfileId}/files`), {
         method: 'POST',
         body: data
       });
@@ -302,7 +311,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`/api/profiles/${activeProfileId}/learned-fields`, {
+      const res = await fetch(getEndpoint(`/profiles/${activeProfileId}/learned-fields`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,7 +331,7 @@ export default function App() {
 
   const handleDeleteLearnedField = async (fieldId) => {
     try {
-      const res = await fetch(`/api/profiles/${activeProfileId}/learned-fields/${fieldId}`, { method: 'DELETE' });
+      const res = await fetch(getEndpoint(`/profiles/${activeProfileId}/learned-fields/${fieldId}`), { method: 'DELETE' });
       if (res.ok) {
         loadProfile(activeProfileId);
       }
