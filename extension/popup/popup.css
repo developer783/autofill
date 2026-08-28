@@ -1,0 +1,261 @@
+:root {
+  --bg-page: #e8f5ee;
+  --bg-card: #ffffff;
+  --border-color: #cbd5e1;
+  --primary: #0d9488;
+  --primary-hover: #0f766e;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+  --success: #10b981;
+  --warning: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 350px;
+  background-color: var(--bg-page);
+  color: var(--text-heading);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+}
+
+.popup-container {
+  padding: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-heading);
+}
+
+.brand-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+}
+
+.icon-btn:hover {
+  color: var(--text-heading);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.85rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.input-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.select-control, .input-control {
+  width: 100%;
+  padding: 0.6rem;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-heading);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.select-control:focus, .input-control:focus {
+  border-color: var(--primary);
+}
+
+.btn {
+  width: 100%;
+  padding: 0.7rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: var(--text-heading);
+  border: 1px solid var(--border-color);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.status-banner {
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  margin-top: 0.75rem;
+}
+
+.status-banner.error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.status-banner.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+/* Metrics Grid */
+.metrics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.metrics-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.ats-badge {
+  background: #ccfbf1;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.metric-box {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.metric-box.success { border-color: #bbf7d0; }
+.metric-box.warning { border-color: #fde68a; }
+
+.metric-num {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.metric-box.success .metric-num { color: var(--success); }
+.metric-box.warning .metric-num { color: var(--warning); }
+.metric-box.dim .metric-num { color: var(--text-muted); }
+
+.metric-lbl {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.details-accordion summary {
+  font-size: 0.78rem;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.breakdown-list {
+  max-height: 140px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.breakdown-label {
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.tag-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.tag-filled { background: #dcfce7; color: #15803d; }
+.tag-empty { background: #fef3c7; color: #b45309; }
+.tag-skipped { background: #f1f5f9; color: #475569; }
+
+.hidden { display: none !important; }

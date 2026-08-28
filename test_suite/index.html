@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mock ATS Job Application Test Form</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #e8f5ee;
+      color: #0f172a;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 12px rgba(15,23,42,0.05);
+    }
+    h1 { margin-top: 0; color: #0d9488; font-size: 1.75rem; }
+    h2 { font-size: 1.1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; color: #0f172a; margin-top: 1.5rem; }
+    .form-group {
+      margin-bottom: 1.1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="url"], select, textarea {
+      padding: 0.65rem;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      color: #0f172a;
+      font-size: 0.92rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .state-tracker {
+      margin-top: 2rem;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #0f766e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mock ATS Application Form (End-to-End Verification)</h1>
+    <p style="color:#64748b; font-size:0.9rem">
+      Test strict accuracy rules: empty profile fields leave inputs untouched. Manually type into an empty field to trigger the Learned Field confirmation prompt.
+    </p>
+
+    <form id="application_form" onsubmit="event.preventDefault()">
+      <h2>1. Personal Information</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="first_name">Given Name(s) *</label>
+          <input type="text" id="first_name" name="job_application[first_name]" placeholder="Jane" />
+        </div>
+        <div class="form-group">
+          <label for="last_name">Family Name *</label>
+          <input type="text" id="last_name" name="job_application[last_name]" placeholder="Doe" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="email">Email Address *</label>
+          <input type="email" id="email" name="job_application[email]" placeholder="jane@example.com" />
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number *</label>
+          <input type="tel" id="phone" name="job_application[phone]" placeholder="+91 9876543210" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="street_address">Address Line 1</label>
+        <input type="text" id="street_address" name="address" placeholder="123 Market St" />
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" placeholder="Bangalore" />
+        </div>
+        <div class="form-group">
+          <label for="state">State / Province</label>
+          <input type="text" id="state" name="state" placeholder="Karnataka" />
+        </div>
+      </div>
+
+      <h2>2. Professional Links & Work Authorization</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="linkedin_url">LinkedIn URL</label>
+          <input type="url" id="linkedin_url" name="job_application[answers][linkedin]" placeholder="https://linkedin.com/in/..." />
+        </div>
+        <div class="form-group">
+          <label for="github_url">GitHub URL</label>
+          <input type="url" id="github_url" name="job_application[answers][github]" placeholder="https://github.com/..." />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="work_auth">Work Authorization</label>
+        <input type="text" id="work_auth" name="work_authorization" placeholder="Authorized to work in India" />
+      </div>
+
+      <h2>3. Demographic Self-ID (Voluntary Disclosures)</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="gender_id">Gender Identity</label>
+          <select id="gender_id" name="gender">
+            <option value="">Select gender</option>
+            <option value="Female">Female</option>
+            <option value="Male">Male</option>
+            <option value="Non-Binary">Non-Binary</option>
+            <option value="Decline to self-identify">Decline to self-identify</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="veteran_status_id">Veteran Status</label>
+          <select id="veteran_status_id" name="veteran">
+            <option value="">Select status</option>
+            <option value="I am a protected veteran">I am a protected veteran</option>
+            <option value="I am not a protected veteran">I am not a protected veteran</option>
+            <option value="Decline to self-identify">Decline to self-identify</option>
+          </select>
+        </div>
+      </div>
+
+      <h2>4. Document Attachment & Custom Screening Q&A</h2>
+      <div class="form-group">
+        <label for="resume_file">Attach Resume (PDF/DOCX)</label>
+        <input type="file" id="resume_file" name="resume" />
+      </div>
+
+      <div class="form-group">
+        <label for="notice_period">What is your notice period?</label>
+        <input type="text" id="notice_period" name="custom_q1" placeholder="e.g. 15 days" />
+      </div>
+    </form>
+
+    <div class="state-tracker">
+      <div style="color:#64748b; margin-bottom:0.5rem">=== Controlled State Log (Simulated React Binding) ===</div>
+      <div id="stateOutput">No input events triggered yet...</div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('application_form');
+    const output = document.getElementById('stateOutput');
+    const state = {};
+
+    form.addEventListener('input', (e) => {
+      state[e.target.id || e.target.name] = e.target.value;
+      updateLog();
+    });
+
+    form.addEventListener('change', (e) => {
+      if (e.target.type === 'file') {
+        state[e.target.id || e.target.name] = e.target.files[0]?.name || 'File attached';
+      } else {
+        state[e.target.id || e.target.name] = e.target.value;
+      }
+      updateLog();
+    });
+
+    function updateLog() {
+      output.textContent = JSON.stringify(state, null, 2);
+    }
+  </script>
+</body>
+</html>

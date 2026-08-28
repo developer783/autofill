@@ -1,0 +1,74 @@
+// Greenhouse ATS Tier 1 Adapter
+
+window.ATSGreenhouse = {
+  atsName: 'Greenhouse',
+
+  detect(url, doc) {
+    return url.includes('greenhouse.io') || doc.querySelector('#grnhse_app, form#application_form, [action*="greenhouse"]') !== null;
+  },
+
+  async fill(profile, serverUrl, apiKey) {
+    const stats = { filled: [], left_empty: [], skipped: [], atsName: 'Greenhouse' };
+    const d = profile.details || {};
+    const files = profile.files || {};
+
+    const fieldMap = [
+      { selector: '#first_name, input[name="job_application[first_name]"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
+      { selector: '#last_name, input[name="job_application[last_name]"]', value: d.family_name, key: 'details.family_name', label: 'Last Name' },
+      { selector: '#email, input[name="job_application[email]"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
+      { selector: '#phone, input[name="job_application[phone]"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
+      { selector: '#linkedin_url, input[name*="[linkedin]"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
+      { selector: '#website_url, input[name*="[website]"]', value: d.portfolio_url, key: 'details.portfolio_url', label: 'Portfolio' },
+      { selector: '#github_url, input[name*="[github]"]', value: d.github_url, key: 'details.github_url', label: 'GitHub' },
+      { selector: '#gender_id, select[name*="gender"]', value: d.gender, key: 'details.gender', label: 'Gender' },
+      { selector: '#veteran_status_id, select[name*="veteran"]', value: d.veteran_status, key: 'details.veteran_status', label: 'Veteran' },
+      { selector: '#disability_status_id, select[name*="disability"]', value: d.disability_status, key: 'details.disability_status', label: 'Disability' },
+      { selector: '#race_id, select[name*="race"]', value: d.race_ethnicity, key: 'details.race_ethnicity', label: 'Race' }
+    ];
+
+    for (const item of fieldMap) {
+      const el = document.querySelector(item.selector);
+      if (el) {
+        // Tag element with exact structured DB key for Case A sync
+        el.setAttribute('data-ats-field-key', item.key);
+
+        // STRICT ACCURACY RULE: If profile field is empty/null, LEAVE UNTOUCHED!
+        if (item.value !== undefined && item.value !== null && String(item.value).trim() !== '') {
+          let ok = false;
+          if (el.tagName === 'SELECT') {
+            ok = window.ATSHelpers.setSelectValue(el, item.value);
+          } else {
+            ok = window.ATSHelpers.setInputValue(el, item.value);
+          }
+
+          if (ok) {
+            stats.filled.push({ label: item.label, key: item.key });
+          } else {
+            stats.left_empty.push({ label: item.label, key: item.key, reason: 'Setter error' });
+          }
+        } else {
+          stats.left_empty.push({ label: item.label, key: item.key, reason: 'Profile field empty (untouched)' });
+        }
+      }
+    }
+
+    // Greenhouse Resume Attachment
+    const fileInput = document.querySelector('input[type="file"][name*="resume"], #resume_file');
+    if (fileInput) {
+      const resumeMeta = files.resume;
+      if (resumeMeta && resumeMeta.download_url) {
+        const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
+        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+        if (ok) {
+          stats.filled.push({ label: 'Resume File', key: 'resume' });
+        } else {
+          stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'File error' });
+        }
+      } else {
+        stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'No resume uploaded (untouched)' });
+      }
+    }
+
+    return stats;
+  }
+};
