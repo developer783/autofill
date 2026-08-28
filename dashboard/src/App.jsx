@@ -23,8 +23,8 @@ export default function App() {
     }
     
     const base = raw.replace(/\/+$/, '');
-    const cleanPath = path.startsWith('/api') ? path.substring(4) : path;
-    return `${base}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${cleanPath}`;
   };
 
   // Single-Page Form State (All fields optional for Partial Save Rule)
