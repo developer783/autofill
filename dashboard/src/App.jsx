@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Plus, Save, Trash2, FileText, Upload, Check, Sparkles } from 'lucide-react';
+import { RefreshCw, Plus, Save, Trash2, FileText, Upload } from 'lucide-react';
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com');
@@ -12,16 +12,15 @@ export default function App() {
   const getEndpoint = (path) => {
     let raw = (apiUrl || import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com').trim();
     if (!raw) raw = 'https://smart-autofill-api.onrender.com';
-    
-    // Auto-append .onrender.com if given a short service name without domain
+
     if (!raw.includes('.') && !raw.includes('localhost') && !raw.includes('127.0.0.1')) {
       raw = `${raw}.onrender.com`;
     }
-    
+
     if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
       raw = `https://${raw}`;
     }
-    
+
     const base = raw.replace(/\/+$/, '');
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${base}${cleanPath}`;
@@ -33,6 +32,8 @@ export default function App() {
     profile_slug: '',
     candidate_display_name: 'New Candidate',
     details: {
+      how_did_you_hear_about_us: '',
+      previously_worked_here: false,
       country: '',
       given_names: '',
       family_name: '',
@@ -42,31 +43,32 @@ export default function App() {
       preferred_name: '',
       address_line_1: '',
       city: '',
-      state_province: '',
       postal_code: '',
-      email_address: '',
-      phone_device_type: 'Mobile',
+      state: '',
+      phone_device_type: 'Cellular',
       country_phone_code: '+91',
       phone_number: '',
       phone_extension: '',
-      languages: '',
+      skills: '',
+      websites: '',
       linkedin_url: '',
-      github_url: '',
-      portfolio_url: '',
-      work_authorization: '',
+      legally_authorized_to_work: null,
+      requires_employer_support: null,
+      ethnicity: '',
       gender: '',
-      race_ethnicity: '',
-      hispanic_latino: '',
-      veteran_status: '',
+      protected_veteran_status: '',
+      self_id_language: '',
+      self_id_name: '',
+      employee_id: '',
+      self_id_date: '',
       disability_status: '',
-      default_custom_answer: ''
+      language: ''
     },
-    employment: [
-      { position: 1, job_title: '', company: '', location: '', from_date: '', to_date: '', currently_work_here: false, role_description: '' },
-      { position: 2, job_title: '', company: '', location: '', from_date: '', to_date: '', currently_work_here: false, role_description: '' }
+    work_experience: [
+      { job_title: '', company: '', location: '', from_date: '', to_date: '', currently_work_here: false, role_description: '' }
     ],
     education: [
-      { school_or_university: '', degree: '', field_of_study: '', overall_result_gpa: '', from_year: '', to_year: '' }
+      { school_or_university: '', degree: '', field_of_study: '', overall_result_gpa: '', from_date: '', to_date: '' }
     ],
     files: [],
     learned_fields: []
@@ -74,51 +76,6 @@ export default function App() {
 
   const [newLearnedLabel, setNewLearnedLabel] = useState('');
   const [newLearnedValue, setNewLearnedValue] = useState('');
-
-  // API Key Management State
-  const [apiKeys, setApiKeys] = useState([]);
-  const [keyName, setKeyName] = useState('Extension Key');
-  const [newGeneratedKey, setNewGeneratedKey] = useState('');
-
-  const fetchApiKeys = async () => {
-    try {
-      const res = await fetch(getEndpoint('/api-keys'));
-      if (res.ok) {
-        const data = await res.json();
-        setApiKeys(data);
-      }
-    } catch (e) {
-      console.error('Failed to fetch API keys:', e);
-    }
-  };
-
-  const handleGenerateApiKey = async () => {
-    try {
-      const res = await fetch(getEndpoint('/api-keys'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: keyName || 'Extension Key' })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setNewGeneratedKey(data.plain_key);
-        fetchApiKeys();
-      }
-    } catch (e) {
-      alert('Failed to generate API Key');
-    }
-  };
-
-  const handleRevokeApiKey = async (keyId) => {
-    try {
-      const res = await fetch(getEndpoint(`/api-keys/${keyId}`), { method: 'DELETE' });
-      if (res.ok) {
-        fetchApiKeys();
-      }
-    } catch (e) {
-      alert('Failed to revoke API Key');
-    }
-  };
 
   const fetchProfiles = async () => {
     setLoading(true);
@@ -140,7 +97,6 @@ export default function App() {
 
   useEffect(() => {
     fetchProfiles();
-    fetchApiKeys();
   }, [apiUrl]);
 
   const loadProfile = async (id) => {
@@ -151,20 +107,22 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         const dt = data.details || {};
-        
-        // Ensure 2 employment slots exist for UI
-        const emp = data.employment || [];
-        const emp1 = emp.find(e => e.position === 1) || { position: 1, job_title: '', company: '', location: '', from_date: '', to_date: '', currently_work_here: false, role_description: '' };
-        const emp2 = emp.find(e => e.position === 2) || { position: 2, job_title: '', company: '', location: '', from_date: '', to_date: '', currently_work_here: false, role_description: '' };
 
-        // Ensure 1 education slot exists for UI
-        const edu = data.education && data.education.length > 0 ? data.education : [{ school_or_university: '', degree: '', field_of_study: '', overall_result_gpa: '', from_year: '', to_year: '' }];
+        const we = data.work_experience && data.work_experience.length > 0
+          ? data.work_experience
+          : [{ job_title: '', company: '', location: '', from_date: '', to_date: '', currently_work_here: false, role_description: '' }];
+
+        const edu = data.education && data.education.length > 0
+          ? data.education
+          : [{ school_or_university: '', degree: '', field_of_study: '', overall_result_gpa: '', from_date: '', to_date: '' }];
 
         setFormData({
           id: data.id,
           profile_slug: data.profile_slug,
           candidate_display_name: data.candidate_display_name || '',
           details: {
+            how_did_you_hear_about_us: dt.how_did_you_hear_about_us || '',
+            previously_worked_here: dt.previously_worked_here === true,
             country: dt.country || '',
             given_names: dt.given_names || '',
             family_name: dt.family_name || '',
@@ -174,26 +132,28 @@ export default function App() {
             preferred_name: dt.preferred_name || '',
             address_line_1: dt.address_line_1 || '',
             city: dt.city || '',
-            state_province: dt.state_province || '',
             postal_code: dt.postal_code || '',
-            email_address: dt.email_address || '',
-            phone_device_type: dt.phone_device_type || 'Mobile',
+            state: dt.state || '',
+            phone_device_type: dt.phone_device_type || 'Cellular',
             country_phone_code: dt.country_phone_code || '+91',
             phone_number: dt.phone_number || '',
             phone_extension: dt.phone_extension || '',
-            languages: dt.languages || '',
+            skills: dt.skills || '',
+            websites: dt.websites || '',
             linkedin_url: dt.linkedin_url || '',
-            github_url: dt.github_url || '',
-            portfolio_url: dt.portfolio_url || '',
-            work_authorization: dt.work_authorization || '',
+            legally_authorized_to_work: dt.legally_authorized_to_work,
+            requires_employer_support: dt.requires_employer_support,
+            ethnicity: dt.ethnicity || '',
             gender: dt.gender || '',
-            race_ethnicity: dt.race_ethnicity || '',
-            hispanic_latino: dt.hispanic_latino || '',
-            veteran_status: dt.veteran_status || '',
+            protected_veteran_status: dt.protected_veteran_status || '',
+            self_id_language: dt.self_id_language || '',
+            self_id_name: dt.self_id_name || '',
+            employee_id: dt.employee_id || '',
+            self_id_date: dt.self_id_date || '',
             disability_status: dt.disability_status || '',
-            default_custom_answer: dt.default_custom_answer || ''
+            language: dt.language || ''
           },
-          employment: [emp1, emp2],
+          work_experience: we,
           education: edu,
           files: data.files || [],
           learned_fields: data.learned_fields || []
@@ -230,10 +190,10 @@ export default function App() {
     }));
   };
 
-  const handleEmploymentChange = (index, field, val) => {
-    const next = [...formData.employment];
+  const handleWorkExperienceChange = (index, field, val) => {
+    const next = [...formData.work_experience];
     next[index][field] = val;
-    setFormData(prev => ({ ...prev, employment: next }));
+    setFormData(prev => ({ ...prev, work_experience: next }));
   };
 
   const handleEducationChange = (index, field, val) => {
@@ -252,7 +212,7 @@ export default function App() {
       const payload = {
         candidate_display_name: formData.candidate_display_name || `${formData.profile_slug} Candidate`,
         details: formData.details,
-        employment: formData.employment,
+        work_experience: formData.work_experience,
         education: formData.education
       };
 
@@ -291,12 +251,17 @@ export default function App() {
     }
   };
 
-  const handleFileUpload = async (fileKind, e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !activeProfileId) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds maximum 5MB limit.');
+      return;
+    }
+
     const data = new FormData();
-    data.append('file_kind', fileKind);
+    data.append('file_kind', 'resume');
     data.append('file', file);
 
     try {
@@ -306,7 +271,10 @@ export default function App() {
       });
       if (res.ok) {
         loadProfile(activeProfileId);
-        alert(`${fileKind.replace('_', ' ')} uploaded successfully!`);
+        alert('Resume uploaded successfully!');
+      } else {
+        const err = await res.json();
+        alert(`Upload failed: ${err.detail || 'Error uploading file'}`);
       }
     } catch (e) {
       alert('File upload failed');
@@ -349,6 +317,8 @@ export default function App() {
     }
   };
 
+  const resumeFile = formData.files.find(f => f.file_kind === 'resume');
+
   return (
     <div className="dashboard-layout">
       {/* Header */}
@@ -363,10 +333,10 @@ export default function App() {
 
       {/* 1. Connection Panel */}
       <div className="white-card">
-        <div className="card-title">Connection & Extension Pairing</div>
-        <div className="card-subtitle">Pair API URL and API Key with Chrome Extension to manage candidate profiles</div>
-        
-        <div className="grid-3" style={{ alignItems: 'flex-end', marginBottom: '1rem' }}>
+        <div className="card-title">Connection & Server Pairing</div>
+        <div className="card-subtitle">Specify API URL and manage candidate profiles</div>
+
+        <div className="grid-3" style={{ alignItems: 'flex-end', marginBottom: '0.5rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>API URL (entered in extension settings)</label>
             <input
@@ -384,43 +354,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Extension API Key Pairing Box */}
-        <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-heading)' }}>Extension API Key</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                {apiKeys.length > 0 ? `Active Key Prefix: ${apiKeys[0].prefix}` : 'Default Key: ats_live_default_key_1234567890'}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                className="btn btn-secondary"
-                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                onClick={() => {
-                  const keyToCopy = newGeneratedKey || (apiKeys.length > 0 ? apiKeys[0].prefix : 'ats_live_default_key_1234567890');
-                  navigator.clipboard.writeText(keyToCopy);
-                  alert(`Copied API Key to clipboard: ${keyToCopy}`);
-                }}
-              >
-                Copy API Key
-              </button>
-              <button
-                className="btn btn-primary"
-                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                onClick={handleGenerateApiKey}
-              >
-                Generate New Key
-              </button>
-            </div>
-          </div>
-          {newGeneratedKey && (
-            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#0d9488', fontWeight: 600 }}>
-              New Key Created: <code>{newGeneratedKey}</code> (Copy now — will not be shown again in full)
-            </div>
-          )}
-        </div>
-
         {message && (
           <div style={{ marginTop: '1rem', padding: '0.65rem 1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: '8px', fontSize: '0.9rem' }}>
             {message}
@@ -431,7 +364,7 @@ export default function App() {
       {/* 2. Saved Candidate Profiles Pills */}
       <div className="white-card">
         <div className="card-title">Saved Candidate Profiles</div>
-        <div className="card-subtitle">Click a profile to load into the single-page editor</div>
+        <div className="card-subtitle">Click a profile row to load into the single-page editor</div>
 
         <div className="pills-container">
           {profiles.length === 0 ? (
@@ -457,14 +390,14 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-heading)' }}>
-                  Editing Profile: {formData.profile_slug}
+                  Editing Candidate Profile: {formData.profile_slug}
                 </h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                  All fields are optional. Partial save is supported.
+                  All fields are optional. Partial save is always supported.
                 </p>
               </div>
               <div className="form-group" style={{ marginBottom: 0, width: '260px' }}>
-                <label>Display Name</label>
+                <label>Candidate Display Name</label>
                 <input
                   type="text"
                   className="form-control"
@@ -474,24 +407,48 @@ export default function App() {
               </div>
             </div>
 
-            {/* Section 1: Legal Name */}
+            {/* Section 1: Application Info */}
             <div className="section-divider">
-              <span className="section-title">1. Legal Name</span>
+              <span className="section-title">Application Info</span>
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>How Did You Hear About Us</label>
+                <select className="form-control" value={formData.details.how_did_you_hear_about_us || ''} onChange={(e) => handleDetailChange('how_did_you_hear_about_us', e.target.value)}>
+                  <option value="">-- Select Option --</option>
+                  <option value="Job Board">Job Board</option>
+                  <option value="Social Media">Social Media</option>
+                  <option value="Website">Website</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Previously Worked Here</label>
+                <select className="form-control" value={formData.details.previously_worked_here === true ? 'Yes' : (formData.details.previously_worked_here === false ? 'No' : '')} onChange={(e) => handleDetailChange('previously_worked_here', e.target.value === 'Yes')}>
+                  <option value="">-- Select --</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Section 2: Legal Name */}
+            <div className="section-divider" style={{ marginTop: '1.5rem' }}>
+              <span className="section-title">Legal Name</span>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label>Country / Region</label>
-                <input type="text" className="form-control" value={formData.details.country || ''} onChange={(e) => handleDetailChange('country', e.target.value)} placeholder="India" />
+                <input type="text" className="form-control" value={formData.details.country || ''} onChange={(e) => handleDetailChange('country', e.target.value)} placeholder="United States" />
               </div>
               <div className="form-group">
                 <label>Given Name(s)</label>
-                <input type="text" className="form-control" value={formData.details.given_names || ''} onChange={(e) => handleDetailChange('given_names', e.target.value)} placeholder="First / Given name" />
+                <input type="text" className="form-control" value={formData.details.given_names || ''} onChange={(e) => handleDetailChange('given_names', e.target.value)} placeholder="First / Given Name" />
               </div>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label>Family Name</label>
-                <input type="text" className="form-control" value={formData.details.family_name || ''} onChange={(e) => handleDetailChange('family_name', e.target.value)} placeholder="Last / Surname" />
+                <input type="text" className="form-control" value={formData.details.family_name || ''} onChange={(e) => handleDetailChange('family_name', e.target.value)} placeholder="Last / Family Name" />
               </div>
               <div className="form-group">
                 <label>Local Given Name(s)</label>
@@ -504,14 +461,23 @@ export default function App() {
                 <input type="text" className="form-control" value={formData.details.local_family_name || ''} onChange={(e) => handleDetailChange('local_family_name', e.target.value)} />
               </div>
               <div className="form-group">
+                <label>Has Preferred Name?</label>
+                <select className="form-control" value={formData.details.has_preferred_name ? 'Yes' : 'No'} onChange={(e) => handleDetailChange('has_preferred_name', e.target.value === 'Yes')}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+            </div>
+            {formData.details.has_preferred_name && (
+              <div className="form-group">
                 <label>Preferred Name</label>
                 <input type="text" className="form-control" value={formData.details.preferred_name || ''} onChange={(e) => handleDetailChange('preferred_name', e.target.value)} />
               </div>
-            </div>
+            )}
 
-            {/* Section 2: Address */}
+            {/* Section 3: Address */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">2. Address</span>
+              <span className="section-title">Address</span>
             </div>
             <div className="form-group">
               <label>Address Line 1</label>
@@ -523,30 +489,25 @@ export default function App() {
                 <input type="text" className="form-control" value={formData.details.city || ''} onChange={(e) => handleDetailChange('city', e.target.value)} />
               </div>
               <div className="form-group">
-                <label>State / Province</label>
-                <input type="text" className="form-control" value={formData.details.state_province || ''} onChange={(e) => handleDetailChange('state_province', e.target.value)} />
+                <label>State</label>
+                <input type="text" className="form-control" value={formData.details.state || ''} onChange={(e) => handleDetailChange('state', e.target.value)} />
               </div>
               <div className="form-group">
                 <label>Postal Code</label>
                 <input type="text" className="form-control" value={formData.details.postal_code || ''} onChange={(e) => handleDetailChange('postal_code', e.target.value)} />
               </div>
             </div>
-            <div className="form-group">
-              <label>Email Address</label>
-              <input type="email" className="form-control" value={formData.details.email_address || ''} onChange={(e) => handleDetailChange('email_address', e.target.value)} />
-            </div>
 
-            {/* Section 3: Phone */}
+            {/* Section 4: Phone */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">3. Phone</span>
+              <span className="section-title">Phone</span>
             </div>
             <div className="grid-3">
               <div className="form-group">
                 <label>Phone Device Type</label>
-                <select className="form-control" value={formData.details.phone_device_type || 'Mobile'} onChange={(e) => handleDetailChange('phone_device_type', e.target.value)}>
-                  <option value="Mobile">Mobile</option>
+                <select className="form-control" value={formData.details.phone_device_type || 'Cellular'} onChange={(e) => handleDetailChange('phone_device_type', e.target.value)}>
+                  <option value="Cellular">Cellular</option>
                   <option value="Home">Home</option>
-                  <option value="Work">Work</option>
                 </select>
               </div>
               <div className="form-group">
@@ -559,46 +520,44 @@ export default function App() {
               </div>
             </div>
 
-            {/* Section 4: Employment History (Most Recent Two) */}
+            {/* Section 5: Work Experience */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">4. Employment History (Most Recent Two)</span>
+              <span className="section-title">Work Experience</span>
             </div>
-
-            {[0, 1].map((idx) => (
-              <div key={idx} style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '1rem' }}>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.75rem' }}>
-                  Position {idx + 1}
-                </h4>
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label>Job Title</label>
-                    <input type="text" className="form-control" value={formData.employment[idx]?.job_title || ''} onChange={(e) => handleEmploymentChange(idx, 'job_title', e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label>Company</label>
-                    <input type="text" className="form-control" value={formData.employment[idx]?.company || ''} onChange={(e) => handleEmploymentChange(idx, 'company', e.target.value)} />
-                  </div>
+            <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '1rem' }}>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Job Title</label>
+                  <input type="text" className="form-control" value={formData.work_experience[0]?.job_title || ''} onChange={(e) => handleWorkExperienceChange(0, 'job_title', e.target.value)} />
                 </div>
-                <div className="grid-3">
-                  <div className="form-group">
-                    <label>Location</label>
-                    <input type="text" className="form-control" value={formData.employment[idx]?.location || ''} onChange={(e) => handleEmploymentChange(idx, 'location', e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label>From Date (MM/YYYY)</label>
-                    <input type="text" className="form-control" value={formData.employment[idx]?.from_date || ''} onChange={(e) => handleEmploymentChange(idx, 'from_date', e.target.value)} placeholder="01/2022" />
-                  </div>
-                  <div className="form-group">
-                    <label>To Date (MM/YYYY)</label>
-                    <input type="text" className="form-control" value={formData.employment[idx]?.to_date || ''} onChange={(e) => handleEmploymentChange(idx, 'to_date', e.target.value)} placeholder="05/2024" />
-                  </div>
+                <div className="form-group">
+                  <label>Company</label>
+                  <input type="text" className="form-control" value={formData.work_experience[0]?.company || ''} onChange={(e) => handleWorkExperienceChange(0, 'company', e.target.value)} />
                 </div>
               </div>
-            ))}
+              <div className="grid-3">
+                <div className="form-group">
+                  <label>Location</label>
+                  <input type="text" className="form-control" value={formData.work_experience[0]?.location || ''} onChange={(e) => handleWorkExperienceChange(0, 'location', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>From Date (MM/YYYY)</label>
+                  <input type="text" className="form-control" value={formData.work_experience[0]?.from_date || ''} onChange={(e) => handleWorkExperienceChange(0, 'from_date', e.target.value)} placeholder="01/2022" />
+                </div>
+                <div className="form-group">
+                  <label>To Date (MM/YYYY)</label>
+                  <input type="text" className="form-control" value={formData.work_experience[0]?.to_date || ''} onChange={(e) => handleWorkExperienceChange(0, 'to_date', e.target.value)} placeholder="Present" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Role Description</label>
+                <textarea className="form-control" rows={3} value={formData.work_experience[0]?.role_description || ''} onChange={(e) => handleWorkExperienceChange(0, 'role_description', e.target.value)} />
+              </div>
+            </div>
 
-            {/* Section 5: Education */}
+            {/* Section 6: Education */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">5. Education</span>
+              <span className="section-title">Education</span>
             </div>
             <div className="grid-2">
               <div className="form-group">
@@ -620,102 +579,164 @@ export default function App() {
                 <input type="text" className="form-control" value={formData.education[0]?.overall_result_gpa || ''} onChange={(e) => handleEducationChange(0, 'overall_result_gpa', e.target.value)} />
               </div>
               <div className="form-group">
-                <label>Graduation Year</label>
-                <input type="text" className="form-control" value={formData.education[0]?.to_year || ''} onChange={(e) => handleEducationChange(0, 'to_year', e.target.value)} placeholder="2020" />
+                <label>From Date - To Date</label>
+                <input type="text" className="form-control" value={formData.education[0]?.to_date || ''} onChange={(e) => handleEducationChange(0, 'to_date', e.target.value)} placeholder="2018 - 2022" />
               </div>
             </div>
 
-            {/* Section 6: Languages */}
+            {/* Section 7: Skills */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">6. Languages</span>
+              <span className="section-title">Skills</span>
             </div>
             <div className="form-group">
-              <label>Languages (comma-separated)</label>
-              <input type="text" className="form-control" value={formData.details.languages || ''} onChange={(e) => handleDetailChange('languages', e.target.value)} placeholder="English, Hindi, Spanish" />
+              <label>Skills (Comma-separated list)</label>
+              <input type="text" className="form-control" value={formData.details.skills || ''} onChange={(e) => handleDetailChange('skills', e.target.value)} placeholder="Python, React, TypeScript, PostgreSQL, Docker" />
             </div>
 
-            {/* Section 7: Links and Work Authorization */}
+            {/* Section 8: Resume/CV */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">7. Links & Work Authorization</span>
+              <span className="section-title">Resume / CV</span>
             </div>
-            <div className="grid-3">
-              <div className="form-group">
-                <label>LinkedIn URL</label>
-                <input type="url" className="form-control" value={formData.details.linkedin_url || ''} onChange={(e) => handleDetailChange('linkedin_url', e.target.value)} />
+            <div className="file-card">
+              <div className="file-info">
+                <FileText size={20} style={{ color: 'var(--primary)' }} />
+                <div>
+                  <strong>Resume File</strong>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                    {resumeFile ? resumeFile.filename : 'No resume attached (Max 5MB)'}
+                  </div>
+                </div>
               </div>
-              <div className="form-group">
-                <label>GitHub URL</label>
-                <input type="url" className="form-control" value={formData.details.github_url || ''} onChange={(e) => handleDetailChange('github_url', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Portfolio URL</label>
-                <input type="url" className="form-control" value={formData.details.portfolio_url || ''} onChange={(e) => handleDetailChange('portfolio_url', e.target.value)} />
-              </div>
+              <label className="btn btn-secondary" style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', fontSize: '0.82rem' }}>
+                <Upload size={14} /> Upload Resume
+                <input type="file" onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,.doc,.docx" />
+              </label>
+            </div>
+
+            {/* Section 9: Websites */}
+            <div className="section-divider" style={{ marginTop: '1.5rem' }}>
+              <span className="section-title">Websites</span>
             </div>
             <div className="form-group">
-              <label>Work Authorization (Free Text)</label>
-              <input type="text" className="form-control" value={formData.details.work_authorization || ''} onChange={(e) => handleDetailChange('work_authorization', e.target.value)} placeholder="Authorized to work in India & US" />
+              <label>Websites (Free text)</label>
+              <input type="text" className="form-control" value={formData.details.websites || ''} onChange={(e) => handleDetailChange('websites', e.target.value)} placeholder="https://myportfolio.com" />
             </div>
 
-            {/* Section 8: Voluntary Disclosures */}
+            {/* Section 10: Social Network URLs */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">8. Voluntary Disclosures</span>
+              <span className="section-title">Social Network URLs</span>
+            </div>
+            <div className="form-group">
+              <label>LinkedIn URL</label>
+              <input type="url" className="form-control" value={formData.details.linkedin_url || ''} onChange={(e) => handleDetailChange('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/username" />
+            </div>
+
+            {/* Section 11: Work Authorization */}
+            <div className="section-divider" style={{ marginTop: '1.5rem' }}>
+              <span className="section-title">Work Authorization</span>
             </div>
             <div className="grid-2">
               <div className="form-group">
-                <label>Gender</label>
-                <input type="text" className="form-control" value={formData.details.gender || ''} onChange={(e) => handleDetailChange('gender', e.target.value)} />
+                <label>Legally Authorized to Work?</label>
+                <select className="form-control" value={formData.details.legally_authorized_to_work === true ? 'Yes' : (formData.details.legally_authorized_to_work === false ? 'No' : '')} onChange={(e) => handleDetailChange('legally_authorized_to_work', e.target.value === 'Yes')}>
+                  <option value="">-- Select --</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
               </div>
               <div className="form-group">
-                <label>Race / Ethnicity</label>
-                <input type="text" className="form-control" value={formData.details.race_ethnicity || ''} onChange={(e) => handleDetailChange('race_ethnicity', e.target.value)} />
+                <label>Requires Employer Sponsorship / Support?</label>
+                <select className="form-control" value={formData.details.requires_employer_support === true ? 'Yes' : (formData.details.requires_employer_support === false ? 'No' : '')} onChange={(e) => handleDetailChange('requires_employer_support', e.target.value === 'Yes')}>
+                  <option value="">-- Select --</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
               </div>
             </div>
 
-            {/* Section 9, 10, 11: Document Uploads */}
+            {/* Section 12: Voluntary Disclosures */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">9. Documents (Resume, Cover Letter, Portfolio)</span>
+              <span className="section-title">Voluntary Disclosures</span>
+            </div>
+            <div className="grid-3">
+              <div className="form-group">
+                <label>Ethnicity</label>
+                <select className="form-control" value={formData.details.ethnicity || ''} onChange={(e) => handleDetailChange('ethnicity', e.target.value)}>
+                  <option value="">-- Select Ethnicity --</option>
+                  <option value="American">American</option>
+                  <option value="Asian">Asian</option>
+                  <option value="African or Black">African or Black</option>
+                  <option value="Decline to Disclose">Decline to Disclose</option>
+                  <option value="Hispanic or Latino">Hispanic or Latino</option>
+                  <option value="White">White</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Gender</label>
+                <select className="form-control" value={formData.details.gender || ''} onChange={(e) => handleDetailChange('gender', e.target.value)}>
+                  <option value="">-- Select Gender --</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Protected Veteran Status</label>
+                <select className="form-control" value={formData.details.protected_veteran_status || ''} onChange={(e) => handleDetailChange('protected_veteran_status', e.target.value)}>
+                  <option value="">-- Select Veteran Status --</option>
+                  <option value="I identify as Veteran">I identify as Veteran</option>
+                  <option value="I identify as Veteran, not protected">I identify as Veteran, not protected</option>
+                  <option value="I am not a Veteran">I am not a Veteran</option>
+                  <option value="I do not wish to identify">I do not wish to identify</option>
+                </select>
+              </div>
             </div>
 
-            {['resume', 'cover_letter', 'portfolio_document'].map((kind) => {
-              const fileObj = formData.files.find(f => f.file_kind === kind);
-              return (
-                <div key={kind} className="file-card">
-                  <div className="file-info">
-                    <FileText size={20} style={{ color: 'var(--primary)' }} />
-                    <div>
-                      <strong style={{ textTransform: 'capitalize' }}>{kind.replace('_', ' ')}</strong>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                        {fileObj ? fileObj.filename : 'No document attached'}
-                      </div>
-                    </div>
-                  </div>
-                  <label className="btn btn-secondary" style={{ cursor: 'pointer', padding: '0.4rem 0.8rem', fontSize: '0.82rem' }}>
-                    <Upload size={14} /> Upload {kind.replace('_', ' ')}
-                    <input type="file" onChange={(e) => handleFileUpload(kind, e)} style={{ display: 'none' }} />
-                  </label>
-                </div>
-              );
-            })}
-
-            {/* Section 12: AI Answer Profile */}
+            {/* Section 13: Disability Self-Identification */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">10. AI Answer Profile</span>
+              <span className="section-title">Disability Self-Identification</span>
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Self-ID Form Language</label>
+                <input type="text" className="form-control" value={formData.details.self_id_language || ''} onChange={(e) => handleDetailChange('self_id_language', e.target.value)} placeholder="English" />
+              </div>
+              <div className="form-group">
+                <label>Self-ID Legal Name</label>
+                <input type="text" className="form-control" value={formData.details.self_id_name || ''} onChange={(e) => handleDetailChange('self_id_name', e.target.value)} />
+              </div>
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label>Employee ID (if applicable)</label>
+                <input type="text" className="form-control" value={formData.details.employee_id || ''} onChange={(e) => handleDetailChange('employee_id', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Self-ID Date</label>
+                <input type="text" className="form-control" value={formData.details.self_id_date || ''} onChange={(e) => handleDetailChange('self_id_date', e.target.value)} placeholder="YYYY-MM-DD" />
+              </div>
             </div>
             <div className="form-group">
-              <label>Default Custom Answer (Fallback for open-ended screening questions)</label>
-              <textarea
-                className="form-control"
-                rows={3}
-                value={formData.details.default_custom_answer || ''}
-                onChange={(e) => handleDetailChange('default_custom_answer', e.target.value)}
-                placeholder="I am an experienced engineer enthusiastic about building scalable web products."
-              />
+              <label>Disability Status</label>
+              <select className="form-control" value={formData.details.disability_status || ''} onChange={(e) => handleDetailChange('disability_status', e.target.value)}>
+                <option value="">-- Select Status --</option>
+                <option value="Yes, I have a disability, or have had one in the past">Yes, I have a disability, or have had one in the past</option>
+                <option value="No, I do not have a disability and have not had one in the past">No, I do not have a disability and have not had one in the past</option>
+                <option value="I do not want to answer">I do not want to answer</option>
+              </select>
             </div>
 
-            {/* Section 13: Learned / Manual Fields */}
+            {/* Section 14: Standalone Language */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">11. Learned / Manual Fields</span>
+              <span className="section-title">Language</span>
+            </div>
+            <div className="form-group">
+              <label>Language* (Standalone)</label>
+              <input type="text" className="form-control" value={formData.details.language || ''} onChange={(e) => handleDetailChange('language', e.target.value)} placeholder="English" />
+            </div>
+
+            {/* Section 15: Learned / Manual Fields */}
+            <div className="section-divider" style={{ marginTop: '1.5rem' }}>
+              <span className="section-title">Learned / Manual Fields</span>
             </div>
             <div style={{ marginBottom: '1rem' }}>
               {formData.learned_fields.length === 0 ? (

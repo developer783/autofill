@@ -5,6 +5,7 @@ window.ATSHelpers = {
   setInputValue(element, value) {
     if (!element || value === undefined || value === null) return false;
     const strVal = String(value);
+    if (!strVal.trim()) return false;
 
     let prototype = window.HTMLInputElement.prototype;
     if (element.tagName === 'TEXTAREA') {
@@ -28,8 +29,10 @@ window.ATSHelpers = {
 
   // Select dropdown option matcher
   setSelectValue(selectEl, value) {
-    if (!selectEl) return false;
-    const valLower = String(value).toLowerCase().strip?.() || String(value).toLowerCase().trim();
+    if (!selectEl || value === undefined || value === null) return false;
+    const valLower = String(value).toLowerCase().trim();
+    if (!valLower) return false;
+
     let bestMatchIndex = -1;
 
     for (let i = 0; i < selectEl.options.length; i++) {
@@ -57,8 +60,9 @@ window.ATSHelpers = {
 
   // Radio button clicker by value or label text
   setRadioValue(radioElements, value) {
-    if (!radioElements || radioElements.length === 0) return false;
+    if (!radioElements || radioElements.length === 0 || value === undefined || value === null) return false;
     const valLower = String(value).toLowerCase().trim();
+    if (!valLower) return false;
 
     for (const radio of radioElements) {
       const radioVal = (radio.value || '').toLowerCase().trim();
@@ -76,8 +80,9 @@ window.ATSHelpers = {
 
   // Custom Combobox / ARIA Dropdown Clicker
   async setCustomComboboxValue(comboboxEl, value) {
-    if (!comboboxEl) return false;
+    if (!comboboxEl || value === undefined || value === null) return false;
     const valLower = String(value).toLowerCase().trim();
+    if (!valLower) return false;
 
     try {
       comboboxEl.focus();
@@ -101,13 +106,11 @@ window.ATSHelpers = {
   },
 
   // File Upload Assigner (DataTransfer + File object)
-  async setFileInput(fileInput, fileBlobUrl, filename, mimetype, apiKey) {
-    if (!fileInput) return false;
+  async setFileInput(fileInput, fileBlobUrl, filename, mimetype) {
+    if (!fileInput || !fileBlobUrl) return false;
 
     try {
-      const res = await fetch(fileBlobUrl, {
-        headers: apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}
-      });
+      const res = await fetch(fileBlobUrl);
       if (!res.ok) return false;
 
       const blob = await res.blob();
@@ -132,8 +135,10 @@ window.ATSHelpers = {
 
     // 1. Check explicit <label for="...">
     if (el.id) {
-      const explicitLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
-      if (explicitLabel) return explicitLabel.textContent.trim();
+      try {
+        const explicitLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (explicitLabel) return explicitLabel.textContent.trim();
+      } catch (e) {}
     }
 
     // 2. Check parent <label>
@@ -154,30 +159,14 @@ window.ATSHelpers = {
     if (el.placeholder) return el.placeholder.trim();
 
     // 5. Look for preceding sibling or parent text container
-    const container = el.closest('.form-group, .field, [class*="field"], [class*="form"], tr, div');
+    const container = el.closest('.form-group, .field, [class*="field"], [class*="form"], tr, td, div');
     if (container) {
-      const labelEl = container.querySelector('label, .label, [class*="label"], header');
+      const labelEl = container.querySelector('label, .label, [class*="label"], header, span');
       if (labelEl && labelEl !== el) {
         return labelEl.textContent.trim();
       }
     }
 
     return el.name || el.id || '';
-  },
-
-  // Fuzzy Q&A pattern matcher
-  matchCustomQA(questionText, customAnswers) {
-    if (!questionText || !customAnswers || customAnswers.length === 0) return null;
-    const qLower = questionText.toLowerCase();
-
-    for (const qa of customAnswers) {
-      const pattern = (qa.question_pattern || '').toLowerCase().trim();
-      if (!pattern) continue;
-
-      if (qLower.includes(pattern) || pattern.includes(qLower)) {
-        return qa.answer;
-      }
-    }
-    return null;
   }
 };

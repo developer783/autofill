@@ -5,8 +5,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import (
-    Organization, CandidateProfile, LearnedField, ProfileFile,
-    ProfileDetail, ProfileEmployment, ProfileEducation
+    CandidateProfile, LearnedField, ProfileFile,
+    ProfileDetail, ProfileWorkExperience, ProfileEducation
 )
 from app.schemas import (
     ExtensionProfilePickerItem, ExtensionFullProfilePayload, LearnedFieldCreate,
@@ -15,19 +15,9 @@ from app.schemas import (
 
 router = APIRouter(prefix="/extension", tags=["Extension API"])
 
-from app.auth import get_team_from_api_key
-
-router = APIRouter(prefix="/extension", tags=["Extension API"])
-
 @router.get("/profiles", response_model=List[ExtensionProfilePickerItem])
-def get_extension_profiles(
-    db: Session = Depends(get_db),
-    org: Organization = Depends(get_team_from_api_key)
-):
-    profiles = db.query(CandidateProfile).filter(
-        CandidateProfile.org_id == org.id
-    ).order_by(CandidateProfile.created_at.asc()).all()
-
+def get_extension_profiles(db: Session = Depends(get_db)):
+    profiles = db.query(CandidateProfile).order_by(CandidateProfile.created_at.asc()).all()
     return [
         ExtensionProfilePickerItem(
             id=p.id,
@@ -39,19 +29,16 @@ def get_extension_profiles(
 @router.get("/profiles/{profile_id}", response_model=ExtensionFullProfilePayload)
 def get_extension_profile_detail(
     profile_id: str,
-    db: Session = Depends(get_db),
-    org: Organization = Depends(get_team_from_api_key)
+    db: Session = Depends(get_db)
 ):
-    p = db.query(CandidateProfile).filter(
-        CandidateProfile.id == profile_id,
-        CandidateProfile.org_id == org.id
-    ).first()
-
+    p = db.query(CandidateProfile).filter(CandidateProfile.id == profile_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Profile not found")
 
     dt = p.details
     details_dict = {
+        "how_did_you_hear_about_us": dt.how_did_you_hear_about_us if dt else None,
+        "previously_worked_here": dt.previously_worked_here if dt else None,
         "country": dt.country if dt else None,
         "given_names": dt.given_names if dt else None,
         "family_name": dt.family_name if dt else None,
@@ -61,24 +48,26 @@ def get_extension_profile_detail(
         "preferred_name": dt.preferred_name if dt else None,
         "address_line_1": dt.address_line_1 if dt else None,
         "city": dt.city if dt else None,
-        "state_province": dt.state_province if dt else None,
         "postal_code": dt.postal_code if dt else None,
-        "email_address": dt.email_address if dt else None,
+        "state": dt.state if dt else None,
         "phone_device_type": dt.phone_device_type if dt else None,
         "country_phone_code": dt.country_phone_code if dt else "+91",
         "phone_number": dt.phone_number if dt else None,
         "phone_extension": dt.phone_extension if dt else None,
-        "languages": dt.languages if dt else None,
+        "skills": dt.skills if dt else None,
+        "websites": dt.websites if dt else None,
         "linkedin_url": dt.linkedin_url if dt else None,
-        "github_url": dt.github_url if dt else None,
-        "portfolio_url": dt.portfolio_url if dt else None,
-        "work_authorization": dt.work_authorization if dt else None,
+        "legally_authorized_to_work": dt.legally_authorized_to_work if dt else None,
+        "requires_employer_support": dt.requires_employer_support if dt else None,
+        "ethnicity": dt.ethnicity if dt else None,
         "gender": dt.gender if dt else None,
-        "race_ethnicity": dt.race_ethnicity if dt else None,
-        "hispanic_latino": dt.hispanic_latino if dt else None,
-        "veteran_status": dt.veteran_status if dt else None,
+        "protected_veteran_status": dt.protected_veteran_status if dt else None,
+        "self_id_language": dt.self_id_language if dt else None,
+        "self_id_name": dt.self_id_name if dt else None,
+        "employee_id": dt.employee_id if dt else None,
+        "self_id_date": dt.self_id_date if dt else None,
         "disability_status": dt.disability_status if dt else None,
-        "default_custom_answer": dt.default_custom_answer if dt else None,
+        "language": dt.language if dt else None,
     }
 
     files_dict = {}
@@ -90,17 +79,16 @@ def get_extension_profile_detail(
             "download_url": f"/extension/profiles/{p.id}/files/{f.id}/download"
         }
 
-    employment_list = [
+    work_experience_list = [
         {
-            "position": emp.position,
-            "job_title": emp.job_title,
-            "company": emp.company,
-            "location": emp.location,
-            "from_date": emp.from_date,
-            "to_date": emp.to_date,
-            "currently_work_here": emp.currently_work_here,
-            "role_description": emp.role_description
-        } for emp in p.employment
+            "job_title": we.job_title,
+            "company": we.company,
+            "location": we.location,
+            "from_date": we.from_date,
+            "to_date": we.to_date,
+            "currently_work_here": we.currently_work_here,
+            "role_description": we.role_description
+        } for we in p.work_experience
     ]
 
     education_list = [
@@ -109,8 +97,8 @@ def get_extension_profile_detail(
             "degree": edu.degree,
             "field_of_study": edu.field_of_study,
             "overall_result_gpa": edu.overall_result_gpa,
-            "from_year": edu.from_year,
-            "to_year": edu.to_year
+            "from_date": edu.from_date,
+            "to_date": edu.to_date
         } for edu in p.education
     ]
 
@@ -128,7 +116,7 @@ def get_extension_profile_detail(
         profile_slug=p.profile_slug,
         candidate_display_name=p.candidate_display_name,
         details=details_dict,
-        employment=employment_list,
+        work_experience=work_experience_list,
         education=education_list,
         files=files_dict,
         learned_fields=learned_list
@@ -138,8 +126,7 @@ def get_extension_profile_detail(
 def download_extension_file_blob(
     profile_id: str,
     file_id: str,
-    db: Session = Depends(get_db),
-    org: Organization = Depends(get_team_from_api_key)
+    db: Session = Depends(get_db)
 ):
     pf = db.query(ProfileFile).filter(
         ProfileFile.id == file_id,
@@ -155,19 +142,14 @@ def download_extension_file_blob(
         media_type=pf.mimetype or "application/octet-stream"
     )
 
-# --- Extension Push Learned Fields Endpoint (Upsert) ---
+# --- Extension Push Learned Fields Endpoint (Case B Upsert) ---
 @router.post("/profiles/{profile_id}/learned-fields", response_model=LearnedFieldResponse)
 def push_learned_field(
     profile_id: str,
     payload: LearnedFieldCreate,
-    db: Session = Depends(get_db),
-    org: Organization = Depends(get_team_from_api_key)
+    db: Session = Depends(get_db)
 ):
-    profile = db.query(CandidateProfile).filter(
-        CandidateProfile.id == profile_id,
-        CandidateProfile.org_id == org.id
-    ).first()
-
+    profile = db.query(CandidateProfile).filter(CandidateProfile.id == profile_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -200,14 +182,9 @@ def push_learned_field(
 def update_extension_profile_field(
     profile_id: str,
     payload: SingleFieldUpdatePayload,
-    db: Session = Depends(get_db),
-    org: Organization = Depends(get_team_from_api_key)
+    db: Session = Depends(get_db)
 ):
-    profile = db.query(CandidateProfile).filter(
-        CandidateProfile.id == profile_id,
-        CandidateProfile.org_id == org.id
-    ).first()
-
+    profile = db.query(CandidateProfile).filter(CandidateProfile.id == profile_id).first()
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -225,28 +202,24 @@ def update_extension_profile_field(
         db.commit()
         return {"status": "success", "updated_field": fk, "value": val}
 
-    if fk.startswith("employment"):
+    if fk.startswith("work_experience"):
         try:
-            idx_str = fk.split("[")[1].split("]")[0]
-            pos = int(idx_str) + 1
             emp_attr = fk.split(".")[-1]
-
-            emp_record = db.query(ProfileEmployment).filter(
-                ProfileEmployment.profile_id == profile.id,
-                ProfileEmployment.position == pos
+            we_record = db.query(ProfileWorkExperience).filter(
+                ProfileWorkExperience.profile_id == profile.id
             ).first()
 
-            if not emp_record:
-                emp_record = ProfileEmployment(profile_id=profile.id, position=pos)
-                db.add(emp_record)
+            if not we_record:
+                we_record = ProfileWorkExperience(profile_id=profile.id)
+                db.add(we_record)
                 db.flush()
 
-            if hasattr(ProfileEmployment, emp_attr) and not emp_attr.startswith("_"):
-                setattr(emp_record, emp_attr, val)
+            if hasattr(ProfileWorkExperience, emp_attr) and not emp_attr.startswith("_") and emp_attr not in ["id", "profile_id"]:
+                setattr(we_record, emp_attr, val)
                 db.commit()
                 return {"status": "success", "updated_field": fk, "value": val}
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid employment field key format: {fk}")
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Invalid work_experience field key format: {fk}")
 
     if fk.startswith("education"):
         try:
@@ -260,11 +233,11 @@ def update_extension_profile_field(
                 db.add(edu_record)
                 db.flush()
 
-            if hasattr(ProfileEducation, edu_attr) and not edu_attr.startswith("_"):
+            if hasattr(ProfileEducation, edu_attr) and not edu_attr.startswith("_") and edu_attr not in ["id", "profile_id"]:
                 setattr(edu_record, edu_attr, val)
                 db.commit()
                 return {"status": "success", "updated_field": fk, "value": val}
-        except Exception as e:
+        except Exception:
             raise HTTPException(status_code=400, detail=f"Invalid education field key format: {fk}")
 
     raise HTTPException(status_code=400, detail=f"Unknown or unsupported field key: {fk}")

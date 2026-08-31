@@ -2,31 +2,18 @@
 node_modules/
 venv/
 .venv/
-ENV/
-
-# Python cache & build outputs
+env/
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.pytest_cache/
 
-# Frontend builds
+# Build outputs
 dist/
 build/
-.vite/
 
-# Database & local storage
+# Local database & uploads
 *.db
-backend/uploads/
+uploads/
 
-# Environment files
+# Environment configuration
 .env
 .env.local
-.env.production
-
-# IDE & System
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/

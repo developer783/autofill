@@ -7,7 +7,7 @@ window.ATSiCIMS = {
     return url.includes('icims.com') || doc.querySelector('[class*="icims"], iframe[id*="icims"]') !== null;
   },
 
-  async fill(profile, serverUrl, apiKey) {
+  async fill(profile, serverUrl) {
     const stats = { filled: [], left_empty: [], skipped: [], atsName: 'iCIMS' };
     const d = profile.details || {};
     const files = profile.files || {};
@@ -42,10 +42,11 @@ window.ATSiCIMS = {
 
     const fileInput = document.querySelector('input[type="file"][id*="Resume"]');
     if (fileInput) {
+      fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
       if (resumeMeta && resumeMeta.download_url) {
         const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
         if (ok) {
           stats.filled.push({ label: 'Resume File', key: 'resume' });
         }

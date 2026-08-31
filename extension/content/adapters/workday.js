@@ -29,7 +29,7 @@ window.ATSWorkday = {
     }
   },
 
-  async fill(profile, serverUrl, apiKey) {
+  async fill(profile, serverUrl) {
     const stats = { filled: [], left_empty: [], skipped: [], atsName: 'Workday' };
     const d = profile.details || {};
     const files = profile.files || {};
@@ -48,8 +48,9 @@ window.ATSWorkday = {
         { selector: '[data-automation-id="phone-number"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
         { selector: '[data-automation-id="linkedin-url"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
         { selector: '[data-automation-id="gender"]', value: d.gender, key: 'details.gender', label: 'Gender' },
-        { selector: '[data-automation-id="hispanicOrLatino"]', value: d.hispanic_latino, key: 'details.hispanic_latino', label: 'Hispanic/Latino' },
-        { selector: '[data-automation-id="veteranStatus"]', value: d.veteran_status, key: 'details.veteran_status', label: 'Veteran Status' }
+        { selector: '[data-automation-id="ethnicity"]', value: d.ethnicity, key: 'details.ethnicity', label: 'Ethnicity' },
+        { selector: '[data-automation-id="veteranStatus"]', value: d.protected_veteran_status, key: 'details.protected_veteran_status', label: 'Veteran Status' },
+        { selector: '[data-automation-id="disabilityStatus"]', value: d.disability_status, key: 'details.disability_status', label: 'Disability Status' }
       ];
 
       for (const item of workdaySelectors) {
@@ -78,10 +79,11 @@ window.ATSWorkday = {
 
       const fileInput = doc.querySelector('[data-automation-id="file-upload-drop-zone"] input[type="file"], input[type="file"]');
       if (fileInput) {
+        fileInput.setAttribute('data-ats-field-key', 'resume');
         const resumeMeta = files.resume;
         if (resumeMeta && resumeMeta.download_url) {
           const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-          const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+          const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
           if (ok) {
             stats.filled.push({ label: 'Resume File', key: 'resume' });
           }

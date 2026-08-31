@@ -1,59 +1,30 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from datetime import datetime
 
-# --- Auth Schemas ---
-class TeamRegister(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-
-class TeamLogin(BaseModel):
-    email: EmailStr
-    password: str
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    team_name: str
-    org_id: str
-
-# --- API Key Schemas ---
-class APIKeyCreate(BaseModel):
-    name: str = "Extension Key"
-
-class APIKeyResponse(BaseModel):
-    id: str
-    name: str
-    prefix: str
-    created_at: datetime
-    revoked: bool
-    plain_key: Optional[str] = None
-
-# --- Child Schemas (ALL FIELDS OPTIONAL / NULLABLE FOR PARTIAL SAVES) ---
-class EmploymentBase(BaseModel):
-    position: Optional[int] = 1
-    job_title: Optional[str] = ""
-    company: Optional[str] = ""
-    location: Optional[str] = ""
-    from_date: Optional[str] = ""
-    to_date: Optional[str] = ""
+# --- Child Schemas (ALL FIELDS OPTIONAL FOR PARTIAL SAVE RULE) ---
+class WorkExperienceBase(BaseModel):
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
     currently_work_here: Optional[bool] = False
-    role_description: Optional[str] = ""
+    role_description: Optional[str] = None
 
-class EmploymentResponse(EmploymentBase):
+class WorkExperienceResponse(WorkExperienceBase):
     id: str
     profile_id: str
     class Config:
         from_attributes = True
 
 class EducationBase(BaseModel):
-    school_or_university: Optional[str] = ""
-    degree: Optional[str] = ""
-    field_of_study: Optional[str] = ""
-    overall_result_gpa: Optional[str] = ""
-    from_year: Optional[str] = ""
-    to_year: Optional[str] = ""
+    school_or_university: Optional[str] = None
+    degree: Optional[str] = None
+    field_of_study: Optional[str] = None
+    overall_result_gpa: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
 
 class EducationResponse(EducationBase):
     id: str
@@ -89,6 +60,10 @@ class LearnedFieldResponse(LearnedFieldBase):
 
 # --- Profile Details (ALL NULLABLE FOR PARTIAL SAVE RULE) ---
 class ProfileDetailBase(BaseModel):
+    # Application Info
+    how_did_you_hear_about_us: Optional[str] = None
+    previously_worked_here: Optional[bool] = None
+
     # Legal Name
     country: Optional[str] = None
     given_names: Optional[str] = None
@@ -101,9 +76,8 @@ class ProfileDetailBase(BaseModel):
     # Address
     address_line_1: Optional[str] = None
     city: Optional[str] = None
-    state_province: Optional[str] = None
     postal_code: Optional[str] = None
-    email_address: Optional[str] = None
+    state: Optional[str] = None
 
     # Phone
     phone_device_type: Optional[str] = None
@@ -111,24 +85,31 @@ class ProfileDetailBase(BaseModel):
     phone_number: Optional[str] = None
     phone_extension: Optional[str] = None
 
-    # Languages
-    languages: Optional[str] = None
+    # Skills & Websites
+    skills: Optional[str] = None
+    websites: Optional[str] = None
 
-    # Links & Work Auth
+    # Social Network URLs
     linkedin_url: Optional[str] = None
-    github_url: Optional[str] = None
-    portfolio_url: Optional[str] = None
-    work_authorization: Optional[str] = None
+
+    # Work Authorization
+    legally_authorized_to_work: Optional[bool] = None
+    requires_employer_support: Optional[bool] = None
 
     # Voluntary Disclosures
+    ethnicity: Optional[str] = None
     gender: Optional[str] = None
-    race_ethnicity: Optional[str] = None
-    hispanic_latino: Optional[str] = None
-    veteran_status: Optional[str] = None
+    protected_veteran_status: Optional[str] = None
+
+    # Disability Self-Identification
+    self_id_language: Optional[str] = None
+    self_id_name: Optional[str] = None
+    employee_id: Optional[str] = None
+    self_id_date: Optional[str] = None
     disability_status: Optional[str] = None
 
-    # AI Answer Profile
-    default_custom_answer: Optional[str] = None
+    # Standalone Language
+    language: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -137,7 +118,7 @@ class ProfileDetailBase(BaseModel):
 class CandidateProfileCreate(BaseModel):
     candidate_display_name: Optional[str] = "New Candidate"
     details: Optional[ProfileDetailBase] = Field(default_factory=ProfileDetailBase)
-    employment: Optional[List[EmploymentBase]] = Field(default_factory=list)
+    work_experience: Optional[List[WorkExperienceBase]] = Field(default_factory=list)
     education: Optional[List[EducationBase]] = Field(default_factory=list)
     learned_fields: Optional[List[LearnedFieldCreate]] = Field(default_factory=list)
 
@@ -154,14 +135,13 @@ class CandidateProfileListItem(BaseModel):
 
 class CandidateProfileFull(BaseModel):
     id: str
-    org_id: str
     profile_slug: str
     candidate_display_name: str
     created_at: datetime
     updated_at: datetime
 
     details: ProfileDetailBase
-    employment: List[EmploymentResponse] = Field(default_factory=list)
+    work_experience: List[WorkExperienceResponse] = Field(default_factory=list)
     education: List[EducationResponse] = Field(default_factory=list)
     files: List[ProfileFileResponse] = Field(default_factory=list)
     learned_fields: List[LearnedFieldResponse] = Field(default_factory=list)
@@ -180,7 +160,7 @@ class ExtensionFullProfilePayload(BaseModel):
     profile_slug: str
     candidate_display_name: str
     details: Dict[str, Any]
-    employment: List[Dict[str, Any]]
+    work_experience: List[Dict[str, Any]]
     education: List[Dict[str, Any]]
     files: Dict[str, Any] # file_kind -> download_url metadata
     learned_fields: List[Dict[str, Any]]

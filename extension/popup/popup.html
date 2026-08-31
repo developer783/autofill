@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>ATS Candidate Autofill</title>
+  <title>Smart Autofill</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
         <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-2.33 4.67-3.5 7-3.5s7 1.17 7 3.5V19z"/>
         </svg>
-        <span>ATS Autofill</span>
+        <span>Smart Autofill</span>
       </div>
       <button id="toggleSettingsBtn" class="icon-btn" title="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -26,7 +26,7 @@
     <!-- Main Tab View -->
     <main id="mainView" class="view">
       <div class="card">
-        <label class="input-label">Active Candidate Profile</label>
+        <label class="input-label">Select Candidate Profile</label>
         <select id="profileSelect" class="select-control">
           <option value="">Loading candidate profiles...</option>
         </select>
@@ -36,7 +36,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
         </svg>
-        <span>Fill This Job Page</span>
+        <span>Fill this page</span>
       </button>
 
       <!-- Notification Banner -->
@@ -45,22 +45,22 @@
       <!-- Feedback Metrics Card -->
       <div id="metricsCard" class="card metrics-card hidden">
         <div class="metrics-header">
-          <span class="metrics-title">Autofill Results</span>
+          <span class="metrics-title">Autofill Status</span>
           <span id="detectedAtsBadge" class="ats-badge">Generic ATS</span>
         </div>
 
         <div class="metrics-grid">
           <div class="metric-box success">
             <span id="statFilledCount" class="metric-num">0</span>
-            <span class="metric-lbl">Filled</span>
+            <span class="metric-lbl">Fields Filled</span>
           </div>
           <div class="metric-box warning">
             <span id="statSkippedCount" class="metric-num">0</span>
-            <span class="metric-lbl">Skipped</span>
+            <span class="metric-lbl">Left Empty</span>
           </div>
           <div class="metric-box dim">
             <span id="statUnrecognizedCount" class="metric-num">0</span>
-            <span class="metric-lbl">Unrecognized</span>
+            <span class="metric-lbl">Skipped</span>
           </div>
         </div>
 
@@ -77,13 +77,8 @@
         <h3 class="section-title">Extension Settings</h3>
 
         <div class="form-group">
-          <label class="input-label">Backend Server URL</label>
-          <input type="text" id="serverUrlInput" class="input-control" value="http://localhost:8000" />
-        </div>
-
-        <div class="form-group">
-          <label class="input-label">Extension API Key</label>
-          <input type="text" id="apiKeyInput" class="input-control" placeholder="ats_live_default_key_1234567890" />
+          <label class="input-label">Server URL</label>
+          <input type="text" id="serverUrlInput" class="input-control" placeholder="https://smart-autofill-api.onrender.com" />
         </div>
 
         <button id="saveSettingsBtn" class="btn btn-secondary">Save Settings</button>

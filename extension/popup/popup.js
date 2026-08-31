@@ -4,24 +4,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
   const backToMainBtn = document.getElementById('backToMainBtn');
   const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-  
+
   const profileSelect = document.getElementById('profileSelect');
   const fillBtn = document.getElementById('fillBtn');
   const statusMessage = document.getElementById('statusMessage');
   const metricsCard = document.getElementById('metricsCard');
-  
   const serverUrlInput = document.getElementById('serverUrlInput');
-  const apiKeyInput = document.getElementById('apiKeyInput');
 
   // Load extension storage settings
   chrome.storage.local.get({
-    serverUrl: 'http://localhost:8000',
-    apiKey: 'ats_live_default_key_1234567890'
+    serverUrl: ''
   }, (items) => {
-    serverUrlInput.value = items.serverUrl;
-    apiKeyInput.value = items.apiKey;
-    
-    loadProfileList();
+    serverUrlInput.value = items.serverUrl || '';
+    if (!items.serverUrl) {
+      showBanner("Please configure the Server URL in Settings.", "error");
+      showSettingsView();
+    } else {
+      loadProfileList();
+    }
   });
 
   function showMainView() {
@@ -45,10 +45,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   backToMainBtn.addEventListener('click', showMainView);
 
   saveSettingsBtn.addEventListener('click', () => {
-    const serverUrl = serverUrlInput.value.trim() || 'http://localhost:8000';
-    const apiKey = apiKeyInput.value.trim() || 'ats_live_default_key_1234567890';
+    let serverUrl = serverUrlInput.value.trim();
+    if (serverUrl && !serverUrl.startsWith('http://') && !serverUrl.startsWith('https://')) {
+      serverUrl = `https://${serverUrl}`;
+    }
 
-    chrome.storage.local.set({ serverUrl, apiKey }, () => {
+    chrome.storage.local.set({ serverUrl }, () => {
       showBanner('Settings saved successfully!', 'success');
       showMainView();
       loadProfileList();
@@ -71,13 +73,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     chrome.runtime.sendMessage({ type: 'GET_PROFILES' }, (response) => {
       if (chrome.runtime.lastError) {
-        showBanner('Background worker error: ' + chrome.runtime.lastError.message, 'error');
+        showBanner("Can't reach server — check the URL in Settings", 'error');
+        profileSelect.innerHTML = '<option value="">Can\'t reach server</option>';
         return;
       }
 
       if (!response || !response.success) {
         profileSelect.innerHTML = '<option value="">Error loading profiles</option>';
-        showBanner(response?.error || 'Could not fetch profiles from server.', 'error');
+        showBanner(response?.error || "Can't reach server — check the URL in Settings", 'error');
         return;
       }
 
@@ -88,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      profileSelect.innerHTML = profiles.map(p => 
+      profileSelect.innerHTML = profiles.map(p =>
         `<option value="${p.id}">${escapeHtml(p.profile_slug)} - ${escapeHtml(p.candidate_display_name)}</option>`
       ).join('');
     });
@@ -102,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     fillBtn.disabled = true;
-    fillBtn.querySelector('span').textContent = 'Filling Form Fields...';
+    fillBtn.querySelector('span').textContent = 'Filling page...';
     hideBanner();
     metricsCard.classList.add('hidden');
 
@@ -111,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       profileId: selectedProfileId
     }, (response) => {
       fillBtn.disabled = false;
-      fillBtn.querySelector('span').textContent = 'Fill This Job Page';
+      fillBtn.querySelector('span').textContent = 'Fill this page';
 
       if (chrome.runtime.lastError) {
         showBanner(chrome.runtime.lastError.message, 'error');
@@ -149,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
 
     if (allItems.length === 0) {
-      breakdownList.innerHTML = '<div style="color:var(--text-muted)">No fields processed on this page.</div>';
+      breakdownList.innerHTML = '<div style="color:var(--text-muted)">No form fields found on this page.</div>';
     } else {
       breakdownList.innerHTML = allItems.map(item => `
         <div class="breakdown-item">

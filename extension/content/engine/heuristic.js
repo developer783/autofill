@@ -2,31 +2,38 @@
 
 window.ATSHeuristic = {
   synonymMap: {
-    'details.given_names': ['first name', 'given name', 'fname', 'forename', 'given names'],
-    'details.family_name': ['last name', 'family name', 'surname', 'lname', 'last_name'],
+    'details.given_names': ['first name', 'given name', 'fname', 'forename', 'given names', 'first_name'],
+    'details.family_name': ['last name', 'family name', 'surname', 'lname', 'last_name', 'family_name'],
     'details.preferred_name': ['preferred name', 'nickname'],
-    'details.email_address': ['email', 'e-mail', 'email address', 'contact email'],
-    'details.phone_number': ['phone', 'mobile', 'telephone', 'cell', 'phone number', 'contact number'],
+    'details.country': ['country', 'nation', 'location country'],
     'details.address_line_1': ['street address', 'address line 1', 'address', 'street', 'residence'],
     'details.city': ['city', 'town', 'municipality'],
-    'details.state_province': ['state', 'province', 'region', 'state/province'],
+    'details.state': ['state', 'province', 'region', 'state/province'],
     'details.postal_code': ['zip', 'zip code', 'postal code', 'postcode'],
-    'details.country': ['country', 'nation'],
+    'details.phone_number': ['phone', 'mobile', 'telephone', 'cell', 'phone number', 'contact number'],
+    'details.how_did_you_hear_about_us': ['how did you hear', 'source', 'hear about us', 'referral source'],
+    'details.previously_worked_here': ['previously worked', 'former employee', 'have you worked here'],
+    'details.skills': ['skills', 'technologies', 'proficiencies', 'key skills'],
+    'details.websites': ['website', 'personal website', 'portfolio site', 'websites'],
     'details.linkedin_url': ['linkedin', 'linkedin profile', 'linkedin url'],
-    'details.github_url': ['github', 'github profile', 'github url'],
-    'details.portfolio_url': ['portfolio', 'website', 'personal site', 'portfolio url'],
-    'details.work_authorization': ['visa status', 'work status', 'authorization status', 'work authorization'],
+    'details.legally_authorized_to_work': ['authorized to work', 'legally authorized', 'work authorization', 'eligible to work'],
+    'details.requires_employer_support': ['sponsorship', 'require sponsorship', 'require support', 'visa support'],
+    'details.ethnicity': ['ethnicity', 'race', 'ethnic background'],
     'details.gender': ['gender', 'sex', 'gender identity'],
-    'details.veteran_status': ['veteran', 'veteran status', 'military'],
-    'details.disability_status': ['disability', 'handicap', 'disability status'],
-    'details.race_ethnicity': ['race', 'ethnicity', 'demographic', 'origin'],
-    'details.languages': ['language', 'languages'],
-    'resume': ['resume', 'cv', 'curriculum vitae', 'upload resume', 'attach resume'],
-    'cover_letter': ['cover letter', 'letter', 'personal statement'],
-    'portfolio_document': ['portfolio document', 'work sample']
+    'details.protected_veteran_status': ['veteran', 'veteran status', 'military status', 'protected veteran'],
+    'details.disability_status': ['disability', 'disability status', 'handicap'],
+    'details.self_id_name': ['disability name', 'signature name', 'self-id name'],
+    'details.language': ['language', 'languages spoken'],
+    'work_experience[0].job_title': ['job title', 'current title', 'most recent title', 'position title'],
+    'work_experience[0].company': ['company', 'employer', 'organization name', 'current employer'],
+    'work_experience[0].location': ['company location', 'work location', 'employer location'],
+    'education[0].school_or_university': ['school', 'university', 'college', 'institution'],
+    'education[0].degree': ['degree', 'qualification', 'degree type'],
+    'education[0].field_of_study': ['field of study', 'major', 'discipline', 'specialization'],
+    'resume': ['resume', 'cv', 'curriculum vitae', 'upload resume', 'attach resume']
   },
 
-  async run(profile, serverUrl, apiKey) {
+  async run(profile, serverUrl) {
     const stats = {
       filled: [],
       left_empty: [],
@@ -44,7 +51,7 @@ window.ATSHeuristic = {
 
       // 1. Check Learned Fields first (label-text match)
       const learnedMatch = this.matchLearnedFields(labelText, profile.learned_fields);
-      if (learnedMatch) {
+      if (learnedMatch && learnedMatch.field_value) {
         const success = window.ATSHelpers.setInputValue(el, learnedMatch.field_value);
         if (success) {
           stats.filled.push({ label: labelText || 'Learned Field', key: 'learned_field' });
@@ -60,7 +67,7 @@ window.ATSHeuristic = {
         for (const syn of synonyms) {
           if (attrString.includes(syn)) {
             const score = syn.length / attrString.length + 0.5;
-            if (score > highestScore) {
+            if (score > highestScore && score >= 0.6) { // Conservative threshold
               highestScore = score;
               matchedKey = key;
             }
@@ -77,12 +84,11 @@ window.ATSHeuristic = {
         if (valueToFill !== undefined && valueToFill !== null && String(valueToFill).trim() !== '') {
           let success = false;
 
-          const fileKey = matchedKey.replace('details.', '');
           if (el.type === 'file') {
-            const fileMeta = profile.files ? profile.files[fileKey] : null;
+            const fileMeta = profile.files ? profile.files.resume : null;
             if (fileMeta && fileMeta.download_url) {
               const fullBlobUrl = `${serverUrl}${fileMeta.download_url}`;
-              success = await window.ATSHelpers.setFileInput(el, fullBlobUrl, fileMeta.filename, fileMeta.mimetype, apiKey);
+              success = await window.ATSHelpers.setFileInput(el, fullBlobUrl, fileMeta.filename, fileMeta.mimetype);
             }
           } else if (el.type === 'checkbox') {
             el.checked = Boolean(valueToFill);
@@ -106,18 +112,6 @@ window.ATSHeuristic = {
           stats.left_empty.push({ label: labelText || matchedKey, key: matchedKey, reason: 'Profile data empty (untouched)' });
         }
       } else {
-        // 3. Fallback AI Answer Profile ONLY for open-ended free-text screening questions
-        if (el.tagName === 'TEXTAREA' || attrString.includes('why') || attrString.includes('describe') || attrString.includes('tell us')) {
-          const aiFallback = profile.details?.default_custom_answer;
-          if (aiFallback && aiFallback.trim()) {
-            const success = window.ATSHelpers.setInputValue(el, aiFallback);
-            if (success) {
-              stats.filled.push({ label: labelText || 'Screening Question', key: 'ai_fallback' });
-              continue;
-            }
-          }
-        }
-
         stats.skipped.push({ label: labelText || el.name || 'Unknown Field' });
       }
     }
@@ -141,32 +135,28 @@ window.ATSHeuristic = {
 
   extractProfileValue(profile, key) {
     const d = profile.details || {};
-    const cleanKey = key.startsWith('details.') ? key.replace('details.', '') : key;
+    const we0 = (profile.work_experience && profile.work_experience.length > 0) ? profile.work_experience[0] : {};
+    const edu0 = (profile.education && profile.education.length > 0) ? profile.education[0] : {};
 
-    switch (cleanKey) {
-      case 'given_names': return d.given_names;
-      case 'family_name': return d.family_name;
-      case 'preferred_name': return d.preferred_name;
-      case 'email_address': return d.email_address;
-      case 'phone_number': return d.phone_number;
-      case 'address_line_1': return d.address_line_1;
-      case 'city': return d.city;
-      case 'state_province': return d.state_province;
-      case 'postal_code': return d.postal_code;
-      case 'country': return d.country;
-      case 'linkedin_url': return d.linkedin_url;
-      case 'github_url': return d.github_url;
-      case 'portfolio_url': return d.portfolio_url;
-      case 'work_authorization': return d.work_authorization;
-      case 'gender': return d.gender;
-      case 'veteran_status': return d.veteran_status;
-      case 'disability_status': return d.disability_status;
-      case 'race_ethnicity': return d.race_ethnicity;
-      case 'languages': return d.languages;
-      case 'resume': return profile.files?.resume;
-      case 'cover_letter': return profile.files?.cover_letter;
-      case 'portfolio_document': return profile.files?.portfolio_document;
-      default: return null;
+    if (key.startsWith('details.')) {
+      const attr = key.replace('details.', '');
+      return d[attr];
     }
+
+    if (key.startsWith('work_experience[')) {
+      const attr = key.split('.').pop();
+      return we0[attr];
+    }
+
+    if (key.startsWith('education[')) {
+      const attr = key.split('.').pop();
+      return edu0[attr];
+    }
+
+    if (key === 'resume') {
+      return profile.files?.resume;
+    }
+
+    return null;
   }
 };

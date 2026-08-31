@@ -1,92 +1,101 @@
-import os
-import sys
-import requests
+import unittest
+from fastapi.testclient import TestClient
+from app.main import app
+from app.database import Base, engine
 
-BASE_URL = "http://localhost:8000"
-DEFAULT_API_KEY = "ats_live_default_key_1234567890"
+Base.metadata.drop_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
-def test_api():
-    print("Testing Smart Autofill Backend API & Security...")
-    
-    # 1. Health check
-    res = requests.get(f"{BASE_URL}/")
-    assert res.status_code == 200, f"Root endpoint failed: {res.text}"
-    print("[OK] Backend API online")
+client = TestClient(app)
 
-    # 2. Test Partial Save Rule on /profiles
-    # Create profile with ONLY 2 fields (given_names + email_address)
-    create_payload = {
-        "candidate_display_name": "Partial Candidate",
-        "details": {
-            "given_names": "Alice",
-            "email_address": "alice@example.com"
+class TestSmartAutofillBackend(unittest.TestCase):
+
+    def setUp(self):
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+
+    def test_01_slug_sequence_and_partial_save(self):
+        """Mandatory Check: Create profile with only 2 fields, confirm save succeeds with nulls elsewhere."""
+        payload = {
+            "candidate_display_name": "Alice Smith",
+            "details": {
+                "given_names": "Alice",
+                "city": "Seattle"
+            }
         }
-    }
-    res = requests.post(f"{BASE_URL}/profiles", json=create_payload)
-    assert res.status_code == 200, f"Create profile failed: {res.text}"
-    profile = res.json()
-    profile_id = profile["id"]
-    profile_slug = profile["profile_slug"]
-    print(f"[OK] Profile created: {profile_slug} ({profile_id})")
+        res = client.post("/profiles", json=payload)
+        self.assertEqual(res.status_code, 200, f"Create profile failed: {res.text}")
+        data = res.json()
 
-    # Verify DB details has given_names and email_address set, family_name and phone_number are null
-    dt = profile["details"]
-    assert dt["given_names"] == "Alice"
-    assert dt["email_address"] == "alice@example.com"
-    assert dt["family_name"] is None
-    assert dt["phone_number"] is None
-    print("[OK] Partial save rule verified (saved with null fields without error)")
+        self.assertEqual(data["profile_slug"], "profile1")
+        self.assertEqual(data["details"]["given_names"], "Alice")
+        self.assertEqual(data["details"]["city"], "Seattle")
+        self.assertIsNone(data["details"]["family_name"])
+        self.assertIsNone(data["details"]["address_line_1"])
 
-    # 3. Test Extension API Bearer Authentication Enforcement
-    # 3a. Without auth header -> MUST return 401
-    res_no_auth = requests.get(f"{BASE_URL}/extension/profiles")
-    assert res_no_auth.status_code == 401, f"Expected 401 without auth, got: {res_no_auth.status_code}"
-    print("[OK] Bearer Auth check passed: missing key returned 401")
+        # Second profile creation must get profile2 without collision
+        res2 = client.post("/profiles", json={"candidate_display_name": "Bob Jones"})
+        self.assertEqual(res2.status_code, 200)
+        data2 = res2.json()
+        self.assertEqual(data2["profile_slug"], "profile2")
 
-    # 3b. With invalid auth header -> MUST return 401
-    res_bad_auth = requests.get(f"{BASE_URL}/extension/profiles", headers={"Authorization": "Bearer invalid_api_key_xyz"})
-    assert res_bad_auth.status_code == 401, f"Expected 401 with bad key, got: {res_bad_auth.status_code}"
-    print("[OK] Bearer Auth check passed: invalid key returned 401")
+    def test_02_extension_endpoints_unauthenticated(self):
+        """Mandatory Check: Extension endpoints require no auth headers."""
+        client.post("/profiles", json={"candidate_display_name": "Profile One"})
+        client.post("/profiles", json={"candidate_display_name": "Profile Two"})
 
-    # 3c. With valid Bearer header -> MUST return 200
-    ext_headers = {"Authorization": f"Bearer {DEFAULT_API_KEY}"}
-    res_valid_auth = requests.get(f"{BASE_URL}/extension/profiles", headers=ext_headers)
-    assert res_valid_auth.status_code == 200, f"Expected 200 with valid key, got: {res_valid_auth.text}"
-    ext_profiles = res_valid_auth.json()
-    assert len(ext_profiles) > 0
-    print(f"[OK] Bearer Auth check passed: valid key retrieved {len(ext_profiles)} profiles")
+        res = client.get("/extension/profiles")
+        self.assertEqual(res.status_code, 200)
+        profiles = res.json()
+        self.assertEqual(len(profiles), 2)
+        self.assertEqual(profiles[0]["profile_slug"], "profile1")
 
-    # 4. Test Extension API - GET /extension/profiles/{id}
-    res_full = requests.get(f"{BASE_URL}/extension/profiles/{profile_id}", headers=ext_headers)
-    assert res_full.status_code == 200
-    assert res_full.json()["details"]["given_names"] == "Alice"
-    print("[OK] Extension full profile payload retrieved")
+        p1_id = profiles[0]["id"]
+        res_full = client.get(f"/extension/profiles/{p1_id}")
+        self.assertEqual(res_full.status_code, 200)
 
-    # 5. Test Case B: POST /extension/profiles/{id}/learned-fields (Upsert)
-    lf_payload = {
-        "ats_domain": "mock-ats.test",
-        "field_label_text": "What is your preferred IDE?",
-        "field_value": "VS Code"
-    }
-    res_lf = requests.post(f"{BASE_URL}/extension/profiles/{profile_id}/learned-fields", json=lf_payload, headers=ext_headers)
-    assert res_lf.status_code == 200, f"Push learned field failed: {res_lf.text}"
-    print("[OK] Case B learned field pushed successfully")
+    def test_03_case_a_bidirectional_sync(self):
+        """Mandatory Check: PATCH /extension/profiles/{id}/field updates single field for active profile."""
+        p1 = client.post("/profiles", json={"candidate_display_name": "Alice"}).json()
+        p2 = client.post("/profiles", json={"candidate_display_name": "Bob"}).json()
 
-    # 6. Test Case A: PATCH /extension/profiles/{id}/field (Single Structured Field Sync)
-    patch_payload = {
-        "field_key": "details.city",
-        "value": "San Francisco"
-    }
-    res_patch = requests.patch(f"{BASE_URL}/extension/profiles/{profile_id}/field", json=patch_payload, headers=ext_headers)
-    assert res_patch.status_code == 200, f"Case A single field PATCH failed: {res_patch.text}"
-    
-    # Verify profile now reflects updated city
-    res_verify = requests.get(f"{BASE_URL}/extension/profiles/{profile_id}", headers=ext_headers)
-    assert res_verify.status_code == 200
-    assert res_verify.json()["details"]["city"] == "San Francisco"
-    print("[OK] Case A single field PATCH verified (city updated to San Francisco)")
+        patch_payload = {
+            "field_key": "details.city",
+            "value": "San Francisco"
+        }
+        res_patch = client.patch(f"/extension/profiles/{p1['id']}/field", json=patch_payload)
+        self.assertEqual(res_patch.status_code, 200)
+        self.assertEqual(res_patch.json()["value"], "San Francisco")
 
-    print("\nALL BACKEND API & SECURITY VERIFICATION CHECKS PASSED SUCCESSFULLY!")
+        # Confirm reload in dashboard shows San Francisco on profile1 only
+        res_check = client.get(f"/profiles/{p1['id']}")
+        self.assertEqual(res_check.json()["details"]["city"], "San Francisco")
+
+        # Confirm profile2 is untouched
+        res_check2 = client.get(f"/profiles/{p2['id']}")
+        self.assertIsNone(res_check2.json()["details"]["city"])
+
+    def test_04_case_b_learned_fields(self):
+        """Mandatory Check: POST /extension/profiles/{id}/learned-fields adds learned field to profile1 only."""
+        p1 = client.post("/profiles", json={"candidate_display_name": "Alice"}).json()
+        p2 = client.post("/profiles", json={"candidate_display_name": "Bob"}).json()
+
+        lf_payload = {
+            "ats_domain": "workday.com",
+            "field_label_text": "Favorite Programming Language",
+            "field_value": "Python"
+        }
+        res_lf = client.post(f"/extension/profiles/{p1['id']}/learned-fields", json=lf_payload)
+        self.assertEqual(res_lf.status_code, 200)
+
+        # Confirm profile1 has learned field
+        res_p1 = client.get(f"/profiles/{p1['id']}")
+        self.assertEqual(len(res_p1.json()["learned_fields"]), 1)
+        self.assertEqual(res_p1.json()["learned_fields"][0]["field_value"], "Python")
+
+        # Confirm profile2 does NOT have learned field
+        res_p2 = client.get(f"/profiles/{p2['id']}")
+        self.assertEqual(len(res_p2.json()["learned_fields"]), 0)
 
 if __name__ == "__main__":
-    test_api()
+    unittest.main()

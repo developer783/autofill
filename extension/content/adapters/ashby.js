@@ -7,7 +7,7 @@ window.ATSAshby = {
     return url.includes('ashbyhq.com') || doc.querySelector('[class*="ashby"], [id*="ashby"]') !== null;
   },
 
-  async fill(profile, serverUrl, apiKey) {
+  async fill(profile, serverUrl) {
     const stats = { filled: [], left_empty: [], skipped: [], atsName: 'Ashby' };
     const d = profile.details || {};
     const files = profile.files || {};
@@ -18,8 +18,7 @@ window.ATSAshby = {
       { selector: 'input[name="email"], input[id*="email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
       { selector: 'input[name="phoneNumber"], input[id*="phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
       { selector: 'input[name*="linkedin"], input[id*="linkedin"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
-      { selector: 'input[name*="github"], input[id*="github"]', value: d.github_url, key: 'details.github_url', label: 'GitHub' },
-      { selector: 'input[name*="website"], input[id*="website"]', value: d.portfolio_url, key: 'details.portfolio_url', label: 'Portfolio' }
+      { selector: 'input[name*="website"], input[id*="website"]', value: d.websites, key: 'details.websites', label: 'Websites' }
     ];
 
     for (const item of fieldMap) {
@@ -42,10 +41,11 @@ window.ATSAshby = {
 
     const fileInput = document.querySelector('input[type="file"]');
     if (fileInput) {
+      fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
       if (resumeMeta && resumeMeta.download_url) {
         const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
         if (ok) {
           stats.filled.push({ label: 'Resume File', key: 'resume' });
         }

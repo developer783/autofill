@@ -7,10 +7,11 @@ window.ATSGreenhouse = {
     return url.includes('greenhouse.io') || doc.querySelector('#grnhse_app, form#application_form, [action*="greenhouse"]') !== null;
   },
 
-  async fill(profile, serverUrl, apiKey) {
+  async fill(profile, serverUrl) {
     const stats = { filled: [], left_empty: [], skipped: [], atsName: 'Greenhouse' };
     const d = profile.details || {};
     const files = profile.files || {};
+    const we0 = (profile.work_experience && profile.work_experience.length > 0) ? profile.work_experience[0] : {};
 
     const fieldMap = [
       { selector: '#first_name, input[name="job_application[first_name]"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
@@ -18,12 +19,12 @@ window.ATSGreenhouse = {
       { selector: '#email, input[name="job_application[email]"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
       { selector: '#phone, input[name="job_application[phone]"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
       { selector: '#linkedin_url, input[name*="[linkedin]"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
-      { selector: '#website_url, input[name*="[website]"]', value: d.portfolio_url, key: 'details.portfolio_url', label: 'Portfolio' },
-      { selector: '#github_url, input[name*="[github]"]', value: d.github_url, key: 'details.github_url', label: 'GitHub' },
       { selector: '#gender_id, select[name*="gender"]', value: d.gender, key: 'details.gender', label: 'Gender' },
-      { selector: '#veteran_status_id, select[name*="veteran"]', value: d.veteran_status, key: 'details.veteran_status', label: 'Veteran' },
+      { selector: '#veteran_status_id, select[name*="veteran"]', value: d.protected_veteran_status, key: 'details.protected_veteran_status', label: 'Veteran' },
       { selector: '#disability_status_id, select[name*="disability"]', value: d.disability_status, key: 'details.disability_status', label: 'Disability' },
-      { selector: '#race_id, select[name*="race"]', value: d.race_ethnicity, key: 'details.race_ethnicity', label: 'Race' }
+      { selector: '#race_id, select[name*="race"]', value: d.ethnicity, key: 'details.ethnicity', label: 'Ethnicity' },
+      { selector: 'input[name*="[company]"]', value: we0.company, key: 'work_experience[0].company', label: 'Company' },
+      { selector: 'input[name*="[title]"]', value: we0.job_title, key: 'work_experience[0].job_title', label: 'Job Title' }
     ];
 
     for (const item of fieldMap) {
@@ -55,10 +56,11 @@ window.ATSGreenhouse = {
     // Greenhouse Resume Attachment
     const fileInput = document.querySelector('input[type="file"][name*="resume"], #resume_file');
     if (fileInput) {
+      fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
       if (resumeMeta && resumeMeta.download_url) {
         const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
         if (ok) {
           stats.filled.push({ label: 'Resume File', key: 'resume' });
         } else {

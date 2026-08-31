@@ -7,11 +7,11 @@ window.ATSSmartRecruiters = {
     return url.includes('smartrecruiters.com') || doc.querySelector('[st-component="apply-form"], form[action*="smartrecruiters"]') !== null;
   },
 
-  async fill(profile, serverUrl, apiKey) {
+  async fill(profile, serverUrl) {
     const stats = { filled: [], left_empty: [], skipped: [], atsName: 'SmartRecruiters' };
     const d = profile.details || {};
     const files = profile.files || {};
-    const location = `${d.city || ''}, ${d.state_province || ''}`.trim();
+    const location = `${d.city || ''}, ${d.state || ''}`.trim();
 
     const fieldMap = [
       { selector: 'input[id="candidate-first-name"], input[name="firstName"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
@@ -42,10 +42,11 @@ window.ATSSmartRecruiters = {
 
     const fileInput = document.querySelector('input[type="file"][id*="resume"], input[type="file"][name="file"]');
     if (fileInput) {
+      fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
       if (resumeMeta && resumeMeta.download_url) {
         const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
         if (ok) {
           stats.filled.push({ label: 'Resume File', key: 'resume' });
         }

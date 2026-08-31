@@ -1,22 +1,20 @@
 // Main Content Script Dispatcher & Part 4 Bidirectional Sync Engine (Case A & Case B)
 
 (function () {
-  console.log('[ATS Autofill] Content script initialized with Bidirectional Sync');
+  console.log('[Smart Autofill] Content script initialized with Bidirectional Sync');
 
   let activeProfileId = null;
   let activeProfileSlug = '';
-  let activeServerUrl = 'http://localhost:8000';
-  let activeApiKey = 'ats_live_default_key_1234567890';
+  let activeServerUrl = 'https://smart-autofill-api.onrender.com';
   let syncTimeoutMap = new Map();
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'START_AUTOFILL') {
-      const { profile, serverUrl, apiKey } = message;
+      const { profile, serverUrl } = message;
 
       activeProfileId = profile.id;
       activeProfileSlug = profile.profile_slug || 'active profile';
       activeServerUrl = serverUrl;
-      activeApiKey = apiKey || 'ats_live_default_key_1234567890';
 
       (async () => {
         try {
@@ -41,11 +39,11 @@
 
           let stats = null;
           if (matchedAdapter) {
-            console.log(`[ATS Autofill] Executing Tier 1 Adapter: ${matchedAdapter.atsName}`);
-            stats = await matchedAdapter.fill(profile, serverUrl, activeApiKey);
+            console.log(`[Smart Autofill] Executing Tier 1 Adapter: ${matchedAdapter.atsName}`);
+            stats = await matchedAdapter.fill(profile, serverUrl);
           } else {
-            console.log('[ATS Autofill] Executing Tier 2 Heuristic Fallback Engine...');
-            stats = await window.ATSHeuristic.run(profile, serverUrl, activeApiKey);
+            console.log('[Smart Autofill] Executing Tier 2 Heuristic Fallback Engine...');
+            stats = await window.ATSHeuristic.run(profile, serverUrl);
           }
 
           // Enable Part 4 Bidirectional Sync Listeners
@@ -53,7 +51,7 @@
 
           sendResponse({ success: true, stats });
         } catch (err) {
-          console.error('[ATS Autofill] Execution error:', err);
+          console.error('[Smart Autofill] Execution error:', err);
           sendResponse({ success: false, error: err.message });
         }
       })();
@@ -111,8 +109,7 @@
       const res = await fetch(`${activeServerUrl}/extension/profiles/${activeProfileId}/field`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeApiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           field_key: fieldKey,
@@ -124,7 +121,7 @@
         showInlineSyncNotification(`✓ Saved ${fieldKey} to ${activeProfileSlug}`);
       }
     } catch (e) {
-      console.error('[ATS Autofill] Case A sync failed:', e);
+      console.error('[Smart Autofill] Case A sync failed:', e);
     }
   }
 
@@ -173,8 +170,7 @@
         const res = await fetch(`${activeServerUrl}/extension/profiles/${activeProfileId}/learned-fields`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${activeApiKey}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             ats_domain: domain,

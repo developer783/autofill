@@ -7,20 +7,20 @@ window.ATSLever = {
     return url.includes('jobs.lever.co') || doc.querySelector('.application-page, form[action*="lever.co"]') !== null;
   },
 
-  async fill(profile, serverUrl, apiKey) {
+  async fill(profile, serverUrl) {
     const stats = { filled: [], left_empty: [], skipped: [], atsName: 'Lever' };
     const d = profile.details || {};
     const files = profile.files || {};
+    const we0 = (profile.work_experience && profile.work_experience.length > 0) ? profile.work_experience[0] : {};
     const fullName = `${d.given_names || ''} ${d.family_name || ''}`.trim();
 
     const fieldMap = [
       { selector: 'input[name="name"]', value: fullName, key: 'details.given_names', label: 'Full Name' },
       { selector: 'input[name="email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
       { selector: 'input[name="phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
-      { selector: 'input[name="org"]', value: profile.employment?.[0]?.company || '', key: 'employment[0].company', label: 'Current Company' },
+      { selector: 'input[name="org"]', value: we0.company, key: 'work_experience[0].company', label: 'Current Company' },
       { selector: 'input[name="urls[LinkedIn]"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
-      { selector: 'input[name="urls[GitHub]"]', value: d.github_url, key: 'details.github_url', label: 'GitHub' },
-      { selector: 'input[name="urls[Portfolio]"]', value: d.portfolio_url, key: 'details.portfolio_url', label: 'Portfolio' }
+      { selector: 'input[name="urls[Portfolio]"]', value: d.websites, key: 'details.websites', label: 'Websites' }
     ];
 
     for (const item of fieldMap) {
@@ -44,10 +44,11 @@ window.ATSLever = {
 
     const fileInput = document.querySelector('input[type="file"][name="resume"]');
     if (fileInput) {
+      fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
       if (resumeMeta && resumeMeta.download_url) {
         const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype, apiKey);
+        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
         if (ok) {
           stats.filled.push({ label: 'Resume File', key: 'resume' });
         }

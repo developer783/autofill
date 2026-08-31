@@ -14,7 +14,7 @@ class StorageService:
         self.endpoint = os.environ.get("STORAGE_ENDPOINT")
 
         self.s3_client = None
-        if self.provider_type == "s3" and self.access_key and self.secret_key:
+        if self.provider_type in ["s3", "r2", "b2"] and self.access_key and self.secret_key:
             try:
                 import boto3
                 self.s3_client = boto3.client(
@@ -24,19 +24,19 @@ class StorageService:
                     endpoint_url=self.endpoint
                 )
             except Exception as e:
-                print(f"[StorageService] Warning: Failed to initialize boto3 S3 client: {e}. Falling back to local storage.")
+                print(f"[StorageService] Warning: Failed to initialize boto3 S3 client ({e}). Falling back to local storage.")
                 self.provider_type = "local"
 
     def save_file(self, file_obj, filename: str, content_type: Optional[str] = None) -> Tuple[str, str]:
         """
         Saves a file and returns (storage_path_or_key, download_or_public_url)
         """
-        if self.provider_type == "s3" and self.s3_client and self.bucket:
+        if self.s3_client and self.bucket:
             try:
                 extra_args = {}
                 if content_type:
                     extra_args['ContentType'] = content_type
-                
+
                 self.s3_client.upload_fileobj(
                     file_obj,
                     self.bucket,
