@@ -97,5 +97,50 @@ class TestSmartAutofillBackend(unittest.TestCase):
         res_p2 = client.get(f"/profiles/{p2['id']}")
         self.assertEqual(len(res_p2.json()["learned_fields"]), 0)
 
+    def test_05_resume_upload_persistence_and_metadata(self):
+        """Mandatory Check: Resume upload returns filename and uploaded_at metadata, and persists across GET /profiles/{id} reloads."""
+        import io
+        p = client.post("/profiles", json={"candidate_display_name": "Test Candidate"}).json()
+        pid = p["id"]
+
+        # Upload first resume
+        fake_file = io.BytesIO(b"Dummy PDF content for resume")
+        res_upload = client.post(
+            f"/profiles/{pid}/files",
+            data={"file_kind": "resume"},
+            files={"file": ("sample_resume.pdf", fake_file, "application/pdf")}
+        )
+        self.assertEqual(res_upload.status_code, 200, f"Upload failed: {res_upload.text}")
+        upload_data = res_upload.json()
+        self.assertEqual(upload_data["filename"], "sample_resume.pdf")
+        self.assertIn("uploaded_at", upload_data)
+        self.assertIsNotNone(upload_data["uploaded_at"])
+
+        # Hard reload check via GET /profiles/{id}
+        res_get = client.get(f"/profiles/{pid}")
+        self.assertEqual(res_get.status_code, 200)
+        profile_data = res_get.json()
+        self.assertEqual(len(profile_data["files"]), 1)
+        self.assertEqual(profile_data["files"][0]["filename"], "sample_resume.pdf")
+        self.assertIn("uploaded_at", profile_data["files"][0])
+
+        # Re-upload updated resume
+        fake_file2 = io.BytesIO(b"New updated resume content")
+        res_upload2 = client.post(
+            f"/profiles/{pid}/files",
+            data={"file_kind": "resume"},
+            files={"file": ("updated_resume.pdf", fake_file2, "application/pdf")}
+        )
+        self.assertEqual(res_upload2.status_code, 200)
+        upload_data2 = res_upload2.json()
+        self.assertEqual(upload_data2["filename"], "updated_resume.pdf")
+
+        # Hard reload check after re-upload
+        res_get2 = client.get(f"/profiles/{pid}")
+        self.assertEqual(res_get2.status_code, 200)
+        profile_data2 = res_get2.json()
+        self.assertEqual(len(profile_data2["files"]), 1)
+        self.assertEqual(profile_data2["files"][0]["filename"], "updated_resume.pdf")
+
 if __name__ == "__main__":
     unittest.main()

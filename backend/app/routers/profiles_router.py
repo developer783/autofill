@@ -200,9 +200,11 @@ async def upload_profile_file(
     ).first()
 
     if existing_file:
+        import datetime
         existing_file.filename = file.filename
         existing_file.mimetype = file.content_type
         existing_file.storage_path = storage_path_or_key
+        existing_file.uploaded_at = datetime.datetime.utcnow()
         db.commit()
         db.refresh(existing_file)
         file_record = existing_file

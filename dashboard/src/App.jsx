@@ -270,8 +270,16 @@ export default function App() {
         body: data
       });
       if (res.ok) {
-        loadProfile(activeProfileId);
-        alert('Resume uploaded successfully!');
+        const uploadedFile = await res.json();
+        setFormData(prev => {
+          const otherFiles = (prev.files || []).filter(f => f.file_kind !== uploadedFile.file_kind);
+          return {
+            ...prev,
+            files: [...otherFiles, uploadedFile]
+          };
+        });
+        setMessage('Resume uploaded successfully!');
+        await loadProfile(activeProfileId);
       } else {
         const err = await res.json();
         alert(`Upload failed: ${err.detail || 'Error uploading file'}`);
@@ -297,9 +305,14 @@ export default function App() {
         })
       });
       if (res.ok) {
+        const newField = await res.json();
+        setFormData(prev => ({
+          ...prev,
+          learned_fields: [...(prev.learned_fields || []), newField]
+        }));
         setNewLearnedLabel('');
         setNewLearnedValue('');
-        loadProfile(activeProfileId);
+        await loadProfile(activeProfileId);
       }
     } catch (e) {
       alert('Failed to add learned field');
@@ -310,7 +323,11 @@ export default function App() {
     try {
       const res = await fetch(getEndpoint(`/profiles/${activeProfileId}/learned-fields/${fieldId}`), { method: 'DELETE' });
       if (res.ok) {
-        loadProfile(activeProfileId);
+        setFormData(prev => ({
+          ...prev,
+          learned_fields: (prev.learned_fields || []).filter(f => f.id !== fieldId)
+        }));
+        await loadProfile(activeProfileId);
       }
     } catch (e) {
       alert('Failed to delete learned field');
@@ -603,7 +620,18 @@ export default function App() {
                 <div>
                   <strong>Resume File</strong>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                    {resumeFile ? resumeFile.filename : 'No resume attached (Max 5MB)'}
+                    {resumeFile ? (
+                      <span>
+                        <strong style={{ color: 'var(--text-heading)' }}>{resumeFile.filename}</strong>
+                        {resumeFile.uploaded_at && (
+                          <span style={{ marginLeft: '0.5rem', opacity: 0.85, fontSize: '0.75rem' }}>
+                            (Uploaded: {new Date(resumeFile.uploaded_at).toLocaleString()})
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      'No resume attached (Max 5MB)'
+                    )}
                   </div>
                 </div>
               </div>
