@@ -142,5 +142,28 @@ class TestSmartAutofillBackend(unittest.TestCase):
         self.assertEqual(len(profile_data2["files"]), 1)
         self.assertEqual(profile_data2["files"][0]["filename"], "updated_resume.pdf")
 
+    def test_06_ai_match_fields_endpoint(self):
+        """Mandatory Check: POST /ai/match-fields returns structured matches and handles missing Anthropic key gracefully."""
+        payload = {
+            "ats_domain": "greenhouse.io",
+            "fields": [
+                {
+                    "field_id": "field_0_first_name",
+                    "label_text": "Given Name(s)",
+                    "name_attr": "first_name",
+                    "input_type": "text"
+                }
+            ],
+            "available_profile_keys": [
+                {"key": "details.given_names", "description": "First or given names"}
+            ]
+        }
+        res = client.post("/ai/match-fields", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("matches", data)
+        self.assertIn("field_0_first_name", data["matches"])
+
 if __name__ == "__main__":
     unittest.main()
+

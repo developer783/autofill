@@ -53,8 +53,6 @@ export default function App() {
       skills: '',
       websites: '',
       linkedin_url: '',
-      github_url: '',
-      portfolio_url: '',
       legally_authorized_to_work: null,
       requires_employer_support: null,
       ethnicity: '',
@@ -145,8 +143,6 @@ export default function App() {
             skills: dt.skills || '',
             websites: dt.websites || '',
             linkedin_url: dt.linkedin_url || '',
-            github_url: dt.github_url || '',
-            portfolio_url: dt.portfolio_url || '',
             legally_authorized_to_work: dt.legally_authorized_to_work,
             requires_employer_support: dt.requires_employer_support,
             ethnicity: dt.ethnicity || '',
@@ -660,23 +656,13 @@ export default function App() {
               <input type="text" className="form-control" value={formData.details.websites || ''} onChange={(e) => handleDetailChange('websites', e.target.value)} placeholder="https://myportfolio.com" />
             </div>
 
-            {/* Section 10: Social Network & Portfolio URLs */}
+            {/* Section 10: Social Network URLs */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">Social Network & Portfolio URLs</span>
+              <span className="section-title">Social Network URLs</span>
             </div>
-            <div className="grid-3">
-              <div className="form-group">
-                <label>LinkedIn URL</label>
-                <input type="url" className="form-control" value={formData.details.linkedin_url || ''} onChange={(e) => handleDetailChange('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/username" />
-              </div>
-              <div className="form-group">
-                <label>GitHub URL</label>
-                <input type="url" className="form-control" value={formData.details.github_url || ''} onChange={(e) => handleDetailChange('github_url', e.target.value)} placeholder="https://github.com/username" />
-              </div>
-              <div className="form-group">
-                <label>Portfolio URL</label>
-                <input type="url" className="form-control" value={formData.details.portfolio_url || ''} onChange={(e) => handleDetailChange('portfolio_url', e.target.value)} placeholder="https://portfolio.com" />
-              </div>
+            <div className="form-group">
+              <label>LinkedIn URL</label>
+              <input type="url" className="form-control" value={formData.details.linkedin_url || ''} onChange={(e) => handleDetailChange('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/username" />
             </div>
 
             {/* Section 11: Work Authorization */}

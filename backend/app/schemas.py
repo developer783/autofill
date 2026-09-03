@@ -92,10 +92,8 @@ class ProfileDetailBase(BaseModel):
     skills: Optional[str] = None
     websites: Optional[str] = None
 
-    # Social Network URLs & Portfolio
+    # Social Network URLs
     linkedin_url: Optional[str] = None
-    github_url: Optional[str] = None
-    portfolio_url: Optional[str] = None
 
     # Work Authorization
     legally_authorized_to_work: Optional[bool] = None
@@ -173,3 +171,31 @@ class ExtensionFullProfilePayload(BaseModel):
 class SingleFieldUpdatePayload(BaseModel):
     field_key: str
     value: Optional[Any] = None
+
+# --- AI Match Fields Schemas (Part 5) ---
+class FieldMetadataInput(BaseModel):
+    field_id: str
+    label_text: Optional[str] = None
+    name_attr: Optional[str] = None
+    id_attr: Optional[str] = None
+    placeholder: Optional[str] = None
+    aria_label: Optional[str] = None
+    input_type: Optional[str] = None
+    nearby_text: Optional[str] = None
+
+class AvailableProfileKeyInput(BaseModel):
+    key: str
+    description: str
+
+class AIMatchFieldsRequest(BaseModel):
+    ats_domain: Optional[str] = None
+    fields: List[FieldMetadataInput]
+    available_profile_keys: List[AvailableProfileKeyInput]
+
+class AIMatchResult(BaseModel):
+    profile_key: Optional[str] = None
+    confidence: float = 0.0
+
+class AIMatchFieldsResponse(BaseModel):
+    matches: Dict[str, AIMatchResult]
+

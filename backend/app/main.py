@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app.migrate import run_migrations
-from app.routers import profiles_router, extension_router
+from app.routers import profiles_router, extension_router, ai_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("smart_autofill")
@@ -56,6 +56,7 @@ app.add_middleware(
 # Include Routers
 app.include_router(profiles_router.router)
 app.include_router(extension_router.router)
+app.include_router(ai_router.router)
 
 @app.get("/")
 def root():

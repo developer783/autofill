@@ -1,6 +1,6 @@
 import datetime
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Text, Integer, Float
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -11,7 +11,7 @@ class CandidateProfile(Base):
     __tablename__ = "candidate_profiles"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    profile_slug = Column(String, nullable=False) # profile1, profile2, ...
+    profile_slug = Column(String, nullable=False, unique=True) # profile1, profile2, ...
     candidate_display_name = Column(String, default="New Candidate")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -48,7 +48,7 @@ class ProfileDetail(Base):
     postal_code = Column(String, nullable=True)
     state = Column(String, nullable=True)
 
-    # Email (ALL NULLABLE)
+    # Contact / Email (ALL NULLABLE)
     email_address = Column(String, nullable=True)
 
     # Phone (ALL NULLABLE)
@@ -61,10 +61,8 @@ class ProfileDetail(Base):
     skills = Column(Text, nullable=True) # comma-separated list
     websites = Column(Text, nullable=True) # free text
 
-    # Social Network URLs & Portfolio (ALL NULLABLE)
+    # Social Network URLs (ALL NULLABLE)
     linkedin_url = Column(String, nullable=True)
-    github_url = Column(String, nullable=True)
-    portfolio_url = Column(String, nullable=True)
 
     # Work Authorization (ALL NULLABLE)
     legally_authorized_to_work = Column(Boolean, nullable=True)
@@ -140,3 +138,17 @@ class LearnedField(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     profile = relationship("CandidateProfile", back_populates="learned_fields")
+
+class ATSFieldMapping(Base):
+    __tablename__ = "ats_field_mappings"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    ats_domain = Column(String, nullable=True, index=True)
+    field_signature_hash = Column(String, nullable=False, index=True)
+    resolved_profile_key = Column(String, nullable=True) # null for confirmed no-match
+    confidence = Column(Float, default=1.0)
+    source = Column(String, default="ai") # ai | heuristic | manual
+    verified_count = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
