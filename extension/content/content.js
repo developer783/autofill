@@ -16,6 +16,9 @@
       activeProfileSlug = profile.profile_slug || 'active profile';
       activeServerUrl = serverUrl;
 
+      // STEP 1 DIAGNOSTIC LOG: Log full profile object fetched from GET /extension/profiles/{id}
+      console.log('[Smart Autofill] [Step 1 Diagnostic] Full Profile object received before fill engine runs:', profile);
+
       (async () => {
         try {
           const currentUrl = window.location.href;

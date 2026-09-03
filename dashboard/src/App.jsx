@@ -45,6 +45,7 @@ export default function App() {
       city: '',
       postal_code: '',
       state: '',
+      email_address: '',
       phone_device_type: 'Cellular',
       country_phone_code: '+91',
       phone_number: '',
@@ -52,6 +53,8 @@ export default function App() {
       skills: '',
       websites: '',
       linkedin_url: '',
+      github_url: '',
+      portfolio_url: '',
       legally_authorized_to_work: null,
       requires_employer_support: null,
       ethnicity: '',
@@ -134,6 +137,7 @@ export default function App() {
             city: dt.city || '',
             postal_code: dt.postal_code || '',
             state: dt.state || '',
+            email_address: dt.email_address || '',
             phone_device_type: dt.phone_device_type || 'Cellular',
             country_phone_code: dt.country_phone_code || '+91',
             phone_number: dt.phone_number || '',
@@ -141,6 +145,8 @@ export default function App() {
             skills: dt.skills || '',
             websites: dt.websites || '',
             linkedin_url: dt.linkedin_url || '',
+            github_url: dt.github_url || '',
+            portfolio_url: dt.portfolio_url || '',
             legally_authorized_to_work: dt.legally_authorized_to_work,
             requires_employer_support: dt.requires_employer_support,
             ethnicity: dt.ethnicity || '',
@@ -515,9 +521,13 @@ export default function App() {
               </div>
             </div>
 
-            {/* Section 4: Phone */}
+            {/* Section 4: Email & Contact */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">Phone</span>
+              <span className="section-title">Email & Phone</span>
+            </div>
+            <div className="form-group">
+              <label>Email Address</label>
+              <input type="email" className="form-control" value={formData.details.email_address || ''} onChange={(e) => handleDetailChange('email_address', e.target.value)} placeholder="candidate@example.com" />
             </div>
             <div className="grid-3">
               <div className="form-group">
@@ -650,13 +660,23 @@ export default function App() {
               <input type="text" className="form-control" value={formData.details.websites || ''} onChange={(e) => handleDetailChange('websites', e.target.value)} placeholder="https://myportfolio.com" />
             </div>
 
-            {/* Section 10: Social Network URLs */}
+            {/* Section 10: Social Network & Portfolio URLs */}
             <div className="section-divider" style={{ marginTop: '1.5rem' }}>
-              <span className="section-title">Social Network URLs</span>
+              <span className="section-title">Social Network & Portfolio URLs</span>
             </div>
-            <div className="form-group">
-              <label>LinkedIn URL</label>
-              <input type="url" className="form-control" value={formData.details.linkedin_url || ''} onChange={(e) => handleDetailChange('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/username" />
+            <div className="grid-3">
+              <div className="form-group">
+                <label>LinkedIn URL</label>
+                <input type="url" className="form-control" value={formData.details.linkedin_url || ''} onChange={(e) => handleDetailChange('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/username" />
+              </div>
+              <div className="form-group">
+                <label>GitHub URL</label>
+                <input type="url" className="form-control" value={formData.details.github_url || ''} onChange={(e) => handleDetailChange('github_url', e.target.value)} placeholder="https://github.com/username" />
+              </div>
+              <div className="form-group">
+                <label>Portfolio URL</label>
+                <input type="url" className="form-control" value={formData.details.portfolio_url || ''} onChange={(e) => handleDetailChange('portfolio_url', e.target.value)} placeholder="https://portfolio.com" />
+              </div>
             </div>
 
             {/* Section 11: Work Authorization */}

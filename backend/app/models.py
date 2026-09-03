@@ -48,6 +48,9 @@ class ProfileDetail(Base):
     postal_code = Column(String, nullable=True)
     state = Column(String, nullable=True)
 
+    # Email (ALL NULLABLE)
+    email_address = Column(String, nullable=True)
+
     # Phone (ALL NULLABLE)
     phone_device_type = Column(String, nullable=True) # Home / Cellular
     country_phone_code = Column(String, default="+91", nullable=True)
@@ -58,8 +61,10 @@ class ProfileDetail(Base):
     skills = Column(Text, nullable=True) # comma-separated list
     websites = Column(Text, nullable=True) # free text
 
-    # Social Network URLs (ALL NULLABLE)
+    # Social Network URLs & Portfolio (ALL NULLABLE)
     linkedin_url = Column(String, nullable=True)
+    github_url = Column(String, nullable=True)
+    portfolio_url = Column(String, nullable=True)
 
     # Work Authorization (ALL NULLABLE)
     legally_authorized_to_work = Column(Boolean, nullable=True)

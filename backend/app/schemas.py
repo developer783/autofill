@@ -79,6 +79,9 @@ class ProfileDetailBase(BaseModel):
     postal_code: Optional[str] = None
     state: Optional[str] = None
 
+    # Email
+    email_address: Optional[str] = None
+
     # Phone
     phone_device_type: Optional[str] = None
     country_phone_code: Optional[str] = "+91"
@@ -89,8 +92,10 @@ class ProfileDetailBase(BaseModel):
     skills: Optional[str] = None
     websites: Optional[str] = None
 
-    # Social Network URLs
+    # Social Network URLs & Portfolio
     linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
 
     # Work Authorization
     legally_authorized_to_work: Optional[bool] = None

@@ -4,6 +4,7 @@ window.ATSHeuristic = {
   synonymMap: {
     'details.given_names': ['first name', 'given name', 'fname', 'forename', 'given names', 'first_name'],
     'details.family_name': ['last name', 'family name', 'surname', 'lname', 'last_name', 'family_name'],
+    'details.email_address': ['email', 'email address', 'e-mail', 'e-mail address', 'contact email', 'email_address'],
     'details.preferred_name': ['preferred name', 'nickname'],
     'details.country': ['country', 'nation', 'location country'],
     'details.address_line_1': ['street address', 'address line 1', 'address', 'street', 'residence'],
@@ -14,8 +15,10 @@ window.ATSHeuristic = {
     'details.how_did_you_hear_about_us': ['how did you hear', 'source', 'hear about us', 'referral source'],
     'details.previously_worked_here': ['previously worked', 'former employee', 'have you worked here'],
     'details.skills': ['skills', 'technologies', 'proficiencies', 'key skills'],
-    'details.websites': ['website', 'personal website', 'portfolio site', 'websites'],
+    'details.websites': ['website', 'personal website', 'portfolio site', 'websites', 'website url', 'personal link'],
     'details.linkedin_url': ['linkedin', 'linkedin profile', 'linkedin url'],
+    'details.github_url': ['github', 'github url', 'github profile'],
+    'details.portfolio_url': ['portfolio', 'portfolio url', 'portfolio website'],
     'details.legally_authorized_to_work': ['authorized to work', 'legally authorized', 'work authorization', 'eligible to work'],
     'details.requires_employer_support': ['sponsorship', 'require sponsorship', 'require support', 'visa support'],
     'details.ethnicity': ['ethnicity', 'race', 'ethnic background'],
@@ -54,6 +57,10 @@ window.ATSHeuristic = {
       if (learnedMatch && learnedMatch.field_value) {
         const success = window.ATSHelpers.setInputValue(el, learnedMatch.field_value);
         if (success) {
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Field attempt:', {
+            label: labelText, name: el.name, id: el.id, type: el.type,
+            matchedKey: 'learned_field', outcomeState: 'matched-and-filled'
+          });
           stats.filled.push({ label: labelText || 'Learned Field', key: 'learned_field' });
           continue;
         }
@@ -102,6 +109,12 @@ window.ATSHeuristic = {
             success = window.ATSHelpers.setInputValue(el, valueToFill);
           }
 
+          const outcomeState = success ? 'matched-and-filled' : 'matched-but-no-data';
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Field attempt:', {
+            label: labelText, name: el.name, id: el.id, type: el.type,
+            matchedKey, outcomeState, valueToFill
+          });
+
           if (success) {
             stats.filled.push({ label: labelText || matchedKey, key: matchedKey });
           } else {
@@ -109,9 +122,17 @@ window.ATSHeuristic = {
           }
         } else {
           // Profile field was empty/null -> LEAVE FIELD UNTOUCHED!
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Field attempt:', {
+            label: labelText, name: el.name, id: el.id, type: el.type,
+            matchedKey, outcomeState: 'matched-but-no-data', reason: 'Profile field empty'
+          });
           stats.left_empty.push({ label: labelText || matchedKey, key: matchedKey, reason: 'Profile data empty (untouched)' });
         }
       } else {
+        console.log('[Smart Autofill] [Step 2 Diagnostic] Field attempt:', {
+          label: labelText, name: el.name, id: el.id, type: el.type,
+          matchedKey: null, outcomeState: 'no-match-found'
+        });
         stats.skipped.push({ label: labelText || el.name || 'Unknown Field' });
       }
     }

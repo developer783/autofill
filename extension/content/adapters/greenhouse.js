@@ -19,6 +19,9 @@ window.ATSGreenhouse = {
       { selector: '#email, input[name="job_application[email]"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
       { selector: '#phone, input[name="job_application[phone]"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
       { selector: '#linkedin_url, input[name*="[linkedin]"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
+      { selector: '#github_url, input[name*="[github]"]', value: d.github_url || d.websites, key: 'details.github_url', label: 'GitHub' },
+      { selector: '#portfolio_url, input[name*="[portfolio]"]', value: d.portfolio_url || d.websites, key: 'details.portfolio_url', label: 'Portfolio' },
+      { selector: '#website_url, input[name*="[website]"]', value: d.websites, key: 'details.websites', label: 'Websites' },
       { selector: '#gender_id, select[name*="gender"]', value: d.gender, key: 'details.gender', label: 'Gender' },
       { selector: '#veteran_status_id, select[name*="veteran"]', value: d.protected_veteran_status, key: 'details.protected_veteran_status', label: 'Veteran' },
       { selector: '#disability_status_id, select[name*="disability"]', value: d.disability_status, key: 'details.disability_status', label: 'Disability' },
@@ -42,12 +45,22 @@ window.ATSGreenhouse = {
             ok = window.ATSHelpers.setInputValue(el, item.value);
           }
 
+          const outcomeState = ok ? 'matched-and-filled' : 'matched-but-no-data';
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) field attempt:', {
+            label: item.label, name: el.name, id: el.id, type: el.type,
+            matchedKey: item.key, outcomeState, value: item.value
+          });
+
           if (ok) {
             stats.filled.push({ label: item.label, key: item.key });
           } else {
             stats.left_empty.push({ label: item.label, key: item.key, reason: 'Setter error' });
           }
         } else {
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) field attempt:', {
+            label: item.label, name: el.name, id: el.id, type: el.type,
+            matchedKey: item.key, outcomeState: 'matched-but-no-data', reason: 'Profile field empty'
+          });
           stats.left_empty.push({ label: item.label, key: item.key, reason: 'Profile field empty (untouched)' });
         }
       }
@@ -61,12 +74,21 @@ window.ATSGreenhouse = {
       if (resumeMeta && resumeMeta.download_url) {
         const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
         const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
+        const outcomeState = ok ? 'matched-and-filled' : 'matched-but-no-data';
+        console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) resume field attempt:', {
+          label: 'Attach Resume', name: fileInput.name, id: fileInput.id, type: 'file',
+          matchedKey: 'resume', outcomeState, filename: resumeMeta.filename
+        });
         if (ok) {
           stats.filled.push({ label: 'Resume File', key: 'resume' });
         } else {
           stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'File error' });
         }
       } else {
+        console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) resume field attempt:', {
+          label: 'Attach Resume', name: fileInput.name, id: fileInput.id, type: 'file',
+          matchedKey: 'resume', outcomeState: 'matched-but-no-data', reason: 'No resume uploaded'
+        });
         stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'No resume uploaded (untouched)' });
       }
     }

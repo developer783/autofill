@@ -59,6 +59,7 @@ def run_migrations(engine: Engine):
                 ("city", "VARCHAR"),
                 ("postal_code", "VARCHAR"),
                 ("state", "VARCHAR"),
+                ("email_address", "VARCHAR"),
                 ("phone_device_type", "VARCHAR"),
                 ("country_phone_code", "VARCHAR DEFAULT '+91'"),
                 ("phone_number", "VARCHAR"),
@@ -66,6 +67,8 @@ def run_migrations(engine: Engine):
                 ("skills", "TEXT"),
                 ("websites", "TEXT"),
                 ("linkedin_url", "VARCHAR"),
+                ("github_url", "VARCHAR"),
+                ("portfolio_url", "VARCHAR"),
                 ("legally_authorized_to_work", "BOOLEAN"),
                 ("requires_employer_support", "BOOLEAN"),
                 ("ethnicity", "VARCHAR"),
@@ -86,7 +89,7 @@ def run_migrations(engine: Engine):
 
             # Drop old obsolete columns in PostgreSQL
             if is_postgres:
-                obsolete_details = ["email_address", "languages", "github_url", "portfolio_url", "work_authorization", "hispanic_latino", "default_custom_answer"]
+                obsolete_details = ["languages", "work_authorization", "hispanic_latino", "default_custom_answer"]
                 for obs in obsolete_details:
                     if obs in detail_cols:
                         logger.info(f"Dropping obsolete column {obs} from profile_details")
