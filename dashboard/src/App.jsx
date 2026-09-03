@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, Plus, Save, Trash2, FileText, Upload } from 'lucide-react';
 
 export default function App() {
-  const [apiUrl, setApiUrl] = useState(import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com');
+  const [apiUrl, setApiUrl] = useState(() => {
+    let raw = (import.meta.env.VITE_API_URL || 'https://smart-autofill-api.onrender.com').trim();
+    if (raw && !raw.startsWith('http://') && !raw.startsWith('https://')) {
+      raw = `https://${raw}`;
+    }
+    return raw || 'https://smart-autofill-api.onrender.com';
+  });
   const [profiles, setProfiles] = useState([]);
   const [activeProfileId, setActiveProfileId] = useState(null);
   const [loading, setLoading] = useState(false);
