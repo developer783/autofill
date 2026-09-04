@@ -25,8 +25,10 @@ window.ATSLever = {
       { selector: 'input[name="email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
       { selector: 'input[name="phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
       { selector: 'input[name="org"]', value: we0.company, key: 'work_experience[0].company', label: 'Current Company' },
-      { selector: 'input[name="urls[LinkedIn]"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
-      { selector: 'input[name="urls[Portfolio]"]', value: d.websites, key: 'details.websites', label: 'Websites' }
+      { selector: 'input[name="urls[LinkedIn]"], input[name*="[linkedin]"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
+      { selector: 'input[name="urls[GitHub]"], input[name*="[github]"]', value: d.github_url, key: 'details.github_url', label: 'GitHub' },
+      { selector: 'input[name="urls[Portfolio]"], input[name*="[portfolio]"]', value: d.portfolio_url || d.websites, key: 'details.portfolio_url', label: 'Portfolio' },
+      { selector: 'input[name="urls[Other]"], input[name*="[website]"]', value: d.websites, key: 'details.websites', label: 'Websites' }
     ];
 
     for (const item of fieldMap) {

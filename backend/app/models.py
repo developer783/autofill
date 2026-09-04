@@ -63,6 +63,8 @@ class ProfileDetail(Base):
 
     # Social Network URLs (ALL NULLABLE)
     linkedin_url = Column(String, nullable=True)
+    github_url = Column(String, nullable=True)
+    portfolio_url = Column(String, nullable=True)
 
     # Work Authorization (ALL NULLABLE)
     legally_authorized_to_work = Column(Boolean, nullable=True)

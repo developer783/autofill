@@ -58,6 +58,8 @@ def get_extension_profile_detail(
         "skills": dt.skills if dt else None,
         "websites": dt.websites if dt else None,
         "linkedin_url": dt.linkedin_url if dt else None,
+        "github_url": dt.github_url if dt else None,
+        "portfolio_url": dt.portfolio_url if dt else None,
         "legally_authorized_to_work": dt.legally_authorized_to_work if dt else None,
         "requires_employer_support": dt.requires_employer_support if dt else None,
         "ethnicity": dt.ethnicity if dt else None,

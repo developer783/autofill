@@ -104,32 +104,76 @@ window.ATSHelpers = {
     return true;
   },
 
-  // Select dropdown option matcher
+  // Select dropdown option matcher (with boolean conversion, fuzzy matching, and ATS synonyms)
   setSelectValue(selectEl, value) {
     if (!selectEl || value === undefined || value === null) return false;
-    const valLower = String(value).toLowerCase().trim();
-    if (!valLower) return false;
+
+    // Convert boolean profile values to Yes/No
+    let searchVals = [];
+    if (value === true || String(value).toLowerCase().trim() === 'true') {
+      searchVals = ['yes', 'true', 'authorized', 'eligible'];
+    } else if (value === false || String(value).toLowerCase().trim() === 'false') {
+      searchVals = ['no', 'false', 'unauthorized', 'ineligible'];
+    } else {
+      searchVals = [String(value).toLowerCase().trim()];
+    }
 
     let bestMatchIndex = -1;
 
-    for (let i = 0; i < selectEl.options.length; i++) {
-      const opt = selectEl.options[i];
-      const optVal = opt.value.toLowerCase().trim();
-      const optText = opt.text.toLowerCase().trim();
+    for (const searchVal of searchVals) {
+      if (!searchVal) continue;
 
-      if (optVal === valLower || optText === valLower) {
-        bestMatchIndex = i;
-        break;
+      // Pass 1: Exact match
+      for (let i = 0; i < selectEl.options.length; i++) {
+        const opt = selectEl.options[i];
+        const optVal = opt.value.toLowerCase().trim();
+        const optText = opt.text.toLowerCase().trim();
+
+        if (optVal === searchVal || optText === searchVal) {
+          bestMatchIndex = i;
+          break;
+        }
       }
-      if (optText.includes(valLower) || valLower.includes(optText)) {
-        bestMatchIndex = i;
+      if (bestMatchIndex !== -1) break;
+
+      // Pass 2: Prefix or Word overlap match (e.g. "India" -> "India (IN)", "Male" -> "Male / He")
+      for (let i = 0; i < selectEl.options.length; i++) {
+        const opt = selectEl.options[i];
+        const optText = opt.text.toLowerCase().trim();
+        const optVal = opt.value.toLowerCase().trim();
+
+        if (optText.startsWith(searchVal) || optVal.startsWith(searchVal) ||
+            optText.includes(searchVal) || searchVal.includes(optText)) {
+          bestMatchIndex = i;
+          break;
+        }
       }
+      if (bestMatchIndex !== -1) break;
+
+      // Pass 3: Common ATS Synonyms (Decline -> Choose not to disclose, No -> I do not have)
+      for (let i = 0; i < selectEl.options.length; i++) {
+        const optText = selectEl.options[i].text.toLowerCase().trim();
+        if (searchVal.includes('decline') && (optText.includes('decline') || optText.includes('choose not') || optText.includes('prefer not'))) {
+          bestMatchIndex = i;
+          break;
+        }
+        if (searchVal.includes('no') && (optText.includes('no') || optText.includes('do not') || optText.includes('don\'t'))) {
+          bestMatchIndex = i;
+          break;
+        }
+        if (searchVal.includes('yes') && (optText.includes('yes') || optText.includes('i have') || optText.includes('am a'))) {
+          bestMatchIndex = i;
+          break;
+        }
+      }
+      if (bestMatchIndex !== -1) break;
     }
 
     if (bestMatchIndex !== -1) {
       selectEl.selectedIndex = bestMatchIndex;
       selectEl.dispatchEvent(new Event('change', { bubbles: true }));
       selectEl.dispatchEvent(new Event('input', { bubbles: true }));
+      selectEl.dispatchEvent(new Event('blur', { bubbles: true }));
       return true;
     }
     return false;
@@ -138,14 +182,17 @@ window.ATSHelpers = {
   // Radio button clicker by value or label text
   setRadioValue(radioElements, value) {
     if (!radioElements || radioElements.length === 0 || value === undefined || value === null) return false;
-    const valLower = String(value).toLowerCase().trim();
-    if (!valLower) return false;
+    let searchVal = String(value).toLowerCase().trim();
+    if (value === true) searchVal = 'yes';
+    if (value === false) searchVal = 'no';
+    if (!searchVal) return false;
 
     for (const radio of radioElements) {
       const radioVal = (radio.value || '').toLowerCase().trim();
       const labelText = this.getElementLabelText(radio).toLowerCase().trim();
 
-      if (radioVal === valLower || labelText.includes(valLower) || valLower.includes(labelText)) {
+      if (radioVal === searchVal || labelText === searchVal ||
+          labelText.includes(searchVal) || searchVal.includes(labelText)) {
         radio.checked = true;
         radio.click();
         radio.dispatchEvent(new Event('change', { bubbles: true }));
@@ -155,26 +202,51 @@ window.ATSHelpers = {
     return false;
   },
 
-  // Custom Combobox / ARIA Dropdown Clicker
+  // Custom Combobox / ARIA Dropdown Clicker (Workday, React Select, Vue, ARIA listbox)
   async setCustomComboboxValue(comboboxEl, value) {
     if (!comboboxEl || value === undefined || value === null) return false;
-    const valLower = String(value).toLowerCase().trim();
-    if (!valLower) return false;
+    let valStr = String(value).toLowerCase().trim();
+    if (value === true) valStr = 'yes';
+    if (value === false) valStr = 'no';
+    if (!valStr) return false;
 
     try {
       comboboxEl.focus();
       comboboxEl.click();
 
-      // Wait 150ms for popup menu to render in DOM
+      // Wait 150ms for popup menu / listbox options to render in DOM or shadow root
       await new Promise(r => setTimeout(r, 150));
 
-      const options = this.querySelectorAllDeep('[role="option"], li, .option, [class*="option"]');
+      const optionSelectors = '[role="option"], [data-automation-id*="option"], [data-automation-id*="promptOption"], li, .option, [class*="option"], [id*="option"], div[tabindex="-1"], span[class*="item"]';
+      const options = this.querySelectorAllDeep(optionSelectors);
+
       for (const opt of options) {
-        const text = (opt.textContent || '').toLowerCase().trim();
-        if (text === valLower || text.includes(valLower) || valLower.includes(text)) {
+        const text = (opt.textContent || opt.getAttribute('data-value') || '').toLowerCase().trim();
+        if (!text) continue;
+
+        if (text === valStr || text.startsWith(valStr) || text.includes(valStr) || valStr.includes(text)) {
+          opt.click();
+          opt.dispatchEvent(new Event('change', { bubbles: true }));
+          return true;
+        }
+
+        // Synonym match
+        if (valStr.includes('decline') && (text.includes('decline') || text.includes('choose not') || text.includes('prefer not'))) {
           opt.click();
           return true;
         }
+        if (valStr.includes('no') && (text.includes('no') || text.includes('do not') || text.includes('don\'t'))) {
+          opt.click();
+          return true;
+        }
+      }
+
+      // Fallback: If input element, type value and press Enter key
+      if (comboboxEl.tagName === 'INPUT' || comboboxEl.getAttribute('contenteditable') === 'true') {
+        this.setInputValue(comboboxEl, String(value));
+        comboboxEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+        comboboxEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+        return true;
       }
     } catch (e) {
       console.warn('Combobox select failed', e);
@@ -182,7 +254,7 @@ window.ATSHelpers = {
     return false;
   },
 
-  // File Upload Assigner (DataTransfer + File object)
+  // File Upload Assigner (DataTransfer + File object + Dropzone dispatches)
   async setFileInput(fileInput, fileBlobUrl, filename, mimetype) {
     if (!fileInput || !fileBlobUrl) return false;
 
@@ -193,12 +265,21 @@ window.ATSHelpers = {
       const blob = await res.blob();
       const file = new File([blob], filename || 'resume.pdf', { type: mimetype || 'application/pdf' });
 
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      fileInput.files = dataTransfer.files;
+      if (typeof DataTransfer !== 'undefined') {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+      }
 
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
       fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // Also trigger event on parent dropzone if present
+      const container = fileInput.closest ? fileInput.closest('.drop-zone, [data-automation-id*="drop-zone"], [class*="dropzone"], [class*="upload"]') : null;
+      if (container) {
+        container.dispatchEvent(new Event('change', { bubbles: true }));
+        container.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       return true;
     } catch (e) {
       console.error('Failed to set file input:', e);

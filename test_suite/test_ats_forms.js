@@ -28,11 +28,15 @@ const sampleProfile = {
     city: 'San Francisco',
     postal_code: '94105',
     linkedin_url: 'https://linkedin.com/in/janedoe',
+    github_url: 'https://github.com/janedoe',
+    portfolio_url: 'https://janedoe.dev',
     websites: 'https://janedoe.dev',
     gender: 'Female',
     ethnicity: 'Decline to self-identify',
     protected_veteran_status: 'I am not a protected veteran',
-    disability_status: 'No, I do not have a disability'
+    disability_status: 'No, I do not have a disability',
+    legally_authorized_to_work: true,
+    requires_employer_support: false
   },
   work_experience: [
     {

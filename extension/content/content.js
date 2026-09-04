@@ -92,10 +92,10 @@
         return;
       }
 
-      // Case B: Unrecognized field -> Learned Field Flow
+      // Case B: Unrecognized field -> Automatic Learned Field Flow (No prompt)
       const labelText = window.ATSHelpers.getElementLabelText(el);
       if (labelText) {
-        debounceSync(el, () => showLearnedToast(labelText, val));
+        debounceSync(el, () => performCaseBSync(labelText, val));
       }
     };
 
@@ -110,7 +110,7 @@
     const timer = setTimeout(() => {
       callback();
       syncTimeoutMap.delete(element);
-    }, 400); // 400ms debounce
+    }, 500); // 500ms debounce
     syncTimeoutMap.set(element, timer);
   }
 
@@ -136,71 +136,30 @@
     }
   }
 
-  // Case B: POST /extension/profiles/{id}/learned-fields (Upsert Learned Fields)
-  function showLearnedToast(labelText, fieldValue) {
-    const existing = document.getElementById('ats-learned-toast');
-    if (existing) existing.remove();
+  // Case B: POST /extension/profiles/{id}/learned-fields (Automatic Silent Learned Field Save)
+  async function performCaseBSync(labelText, fieldValue) {
+    if (!activeProfileId || !labelText || !fieldValue) return;
 
-    const toast = document.createElement('div');
-    toast.id = 'ats-learned-toast';
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 999999;
-      background: #ffffff;
-      color: #0f172a;
-      border: 1px solid #0d9488;
-      border-radius: 8px;
-      padding: 12px 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 13px;
-      max-width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    `;
+    try {
+      const domain = window.location.hostname;
+      const res = await fetch(`${activeServerUrl}/extension/profiles/${activeProfileId}/learned-fields`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ats_domain: domain,
+          field_label_text: labelText,
+          field_value: fieldValue
+        })
+      });
 
-    toast.innerHTML = `
-      <div style="font-weight: 700; color: #0d9488;">Save as Learned Field?</div>
-      <div style="color: #475569;">"<strong>${escapeHtml(labelText)}</strong>": <em>${escapeHtml(fieldValue)}</em></div>
-      <div style="display: flex; gap: 8px; margin-top: 4px;">
-        <button id="ats-toast-yes" style="background: #0d9488; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: 600; cursor: pointer; flex: 1;">Save to ${escapeHtml(activeProfileSlug)}</button>
-        <button id="ats-toast-no" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 4px; font-weight: 600; cursor: pointer;">Dismiss</button>
-      </div>
-    `;
-
-    document.body.appendChild(toast);
-
-    document.getElementById('ats-toast-no').onclick = () => toast.remove();
-    document.getElementById('ats-toast-yes').onclick = async () => {
-      toast.innerHTML = `<div style="color: #0d9488; font-weight: 600;">Saving to ${escapeHtml(activeProfileSlug)}...</div>`;
-      try {
-        const domain = window.location.hostname;
-        const res = await fetch(`${activeServerUrl}/extension/profiles/${activeProfileId}/learned-fields`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ats_domain: domain,
-            field_label_text: labelText,
-            field_value: fieldValue
-          })
-        });
-
-        if (res.ok) {
-          toast.innerHTML = `<div style="color: #166534; font-weight: 600;">✓ Saved to ${escapeHtml(activeProfileSlug)}!</div>`;
-          setTimeout(() => toast.remove(), 2000);
-        } else {
-          toast.innerHTML = '<div style="color: #991b1b; font-weight: 600;">Failed to save.</div>';
-          setTimeout(() => toast.remove(), 2000);
-        }
-      } catch (e) {
-        toast.remove();
+      if (res.ok) {
+        showInlineSyncNotification(`✓ Learned '${labelText}' saved to ${activeProfileSlug}`);
       }
-    };
+    } catch (e) {
+      console.error('[Smart Autofill] Case B auto-sync failed:', e);
+    }
   }
 
   // Small Inline Notification Toast for Case A

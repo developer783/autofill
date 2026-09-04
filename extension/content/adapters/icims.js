@@ -25,7 +25,11 @@ window.ATSiCIMS = {
       { selector: 'input[id$="_Phone"], input[name$="Phone"], input[name="Phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
       { selector: 'input[id$="_AddressLine1"], input[name$="AddressLine1"], input[name="AddressLine1"]', value: d.address_line_1, key: 'details.address_line_1', label: 'Address' },
       { selector: 'input[id$="_City"], input[name$="City"], input[name="City"]', value: d.city, key: 'details.city', label: 'City' },
-      { selector: 'input[id$="_PostalCode"], input[name$="PostalCode"], input[name="PostalCode"]', value: d.postal_code, key: 'details.postal_code', label: 'Postal Code' }
+      { selector: 'input[id$="_PostalCode"], input[name$="PostalCode"], input[name="PostalCode"]', value: d.postal_code, key: 'details.postal_code', label: 'Postal Code' },
+      { selector: 'input[name*="LinkedIn"], input[id*="LinkedIn"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
+      { selector: 'input[name*="GitHub"], input[id*="GitHub"]', value: d.github_url, key: 'details.github_url', label: 'GitHub' },
+      { selector: 'input[name*="Portfolio"], input[id*="Portfolio"]', value: d.portfolio_url || d.websites, key: 'details.portfolio_url', label: 'Portfolio' },
+      { selector: 'input[name*="Website"], input[id*="Website"]', value: d.websites, key: 'details.websites', label: 'Websites' }
     ];
 
     for (const item of fieldMap) {
