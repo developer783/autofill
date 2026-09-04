@@ -1,6 +1,83 @@
 // Helper Utilities for Content Script Form Engine
 
 window.ATSHelpers = {
+  // Recursive DOM & Shadow DOM Query Selector All
+  querySelectorAllDeep(selector, root = document) {
+    if (!root) return [];
+    const results = [];
+    const visited = new Set();
+
+    function walk(node) {
+      if (!node || visited.has(node)) return;
+      visited.add(node);
+
+      if (node.querySelectorAll) {
+        try {
+          const matches = node.querySelectorAll(selector);
+          for (let i = 0; i < matches.length; i++) {
+            if (!results.includes(matches[i])) {
+              results.push(matches[i]);
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Query all elements inside this node to find shadow roots
+      const allElements = node.querySelectorAll ? node.querySelectorAll('*') : [];
+      for (let i = 0; i < allElements.length; i++) {
+        const el = allElements[i];
+        if (el.shadowRoot) {
+          walk(el.shadowRoot);
+        }
+      }
+    }
+
+    walk(root);
+    return results;
+  },
+
+  // Recursive DOM & Shadow DOM Query Selector Single Match
+  querySelectorDeep(selector, root = document) {
+    const matches = this.querySelectorAllDeep(selector, root);
+    return matches.length > 0 ? matches[0] : null;
+  },
+
+  // Wait for DOM stabilization / dynamic field loading
+  async waitForDOM(root = document, timeoutMs = 2000) {
+    if (!root) return [];
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      let timer = null;
+
+      const getFields = () => this.querySelectorAllDeep('input, select, textarea, [role="combobox"]', root);
+
+      const finish = () => {
+        if (timer) clearTimeout(timer);
+        if (observer) observer.disconnect();
+        resolve(getFields());
+      };
+
+      const initialFields = getFields();
+      if (initialFields.length >= 3 || timeoutMs <= 0) {
+        return resolve(initialFields);
+      }
+
+      let observer = null;
+      if (typeof MutationObserver !== 'undefined' && (root.body || root)) {
+        observer = new MutationObserver(() => {
+          if (getFields().length >= 3 || Date.now() - startTime >= timeoutMs) {
+            finish();
+          }
+        });
+        observer.observe(root.body || root, { childList: true, subtree: true });
+      }
+
+      timer = setTimeout(() => {
+        finish();
+      }, timeoutMs);
+    });
+  },
+
   // Controlled input value setter for React / Vue / Angular apps
   setInputValue(element, value) {
     if (!element || value === undefined || value === null) return false;
@@ -91,7 +168,7 @@ window.ATSHelpers = {
       // Wait 150ms for popup menu to render in DOM
       await new Promise(r => setTimeout(r, 150));
 
-      const options = document.querySelectorAll('[role="option"], li, .option, [class*="option"]');
+      const options = this.querySelectorAllDeep('[role="option"], li, .option, [class*="option"]');
       for (const opt of options) {
         const text = (opt.textContent || '').toLowerCase().trim();
         if (text === valLower || text.includes(valLower) || valLower.includes(text)) {
@@ -132,26 +209,27 @@ window.ATSHelpers = {
   // Extract label text from associated elements or nearby DOM
   getElementLabelText(el) {
     if (!el) return '';
+    const rootDoc = el.ownerDocument || document;
 
     // 1. Check explicit <label for="...">
     if (el.id) {
       try {
-        const explicitLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        const explicitLabel = this.querySelectorDeep(`label[for="${CSS.escape(el.id)}"]`, rootDoc);
         if (explicitLabel) return explicitLabel.textContent.trim();
       } catch (e) {}
     }
 
     // 2. Check parent <label>
-    const parentLabel = el.closest('label');
+    const parentLabel = el.closest ? el.closest('label') : null;
     if (parentLabel) return parentLabel.textContent.trim();
 
     // 3. Check aria-labelledby or aria-label
-    if (el.getAttribute('aria-label')) {
+    if (el.getAttribute && el.getAttribute('aria-label')) {
       return el.getAttribute('aria-label').trim();
     }
-    const ariaLabelledBy = el.getAttribute('aria-labelledby');
+    const ariaLabelledBy = el.getAttribute ? el.getAttribute('aria-labelledby') : null;
     if (ariaLabelledBy) {
-      const labelEl = document.getElementById(ariaLabelledBy);
+      const labelEl = this.querySelectorDeep(`#${CSS.escape(ariaLabelledBy)}`, rootDoc);
       if (labelEl) return labelEl.textContent.trim();
     }
 
@@ -159,11 +237,13 @@ window.ATSHelpers = {
     if (el.placeholder) return el.placeholder.trim();
 
     // 5. Look for preceding sibling or parent text container
-    const container = el.closest('.form-group, .field, [class*="field"], [class*="form"], tr, td, div');
-    if (container) {
-      const labelEl = container.querySelector('label, .label, [class*="label"], header, span');
-      if (labelEl && labelEl !== el) {
-        return labelEl.textContent.trim();
+    if (el.closest) {
+      const container = el.closest('.form-group, .field, [class*="field"], [class*="form"], tr, td, div');
+      if (container) {
+        const labelEl = container.querySelector('label, .label, [class*="label"], header, span');
+        if (labelEl && labelEl !== el) {
+          return labelEl.textContent.trim();
+        }
       }
     }
 

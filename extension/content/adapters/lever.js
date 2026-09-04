@@ -4,7 +4,13 @@ window.ATSLever = {
   atsName: 'Lever',
 
   detect(url, doc) {
-    return url.includes('jobs.lever.co') || doc.querySelector('.application-page, form[action*="lever.co"]') !== null;
+    const currentDoc = doc || document;
+    const currentUrl = url || window.location.href;
+    const hasElement = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('.application-page, form[action*="lever.co"], .application-form', currentDoc) !== null
+      : currentDoc.querySelector('.application-page, form[action*="lever.co"]') !== null;
+
+    return currentUrl.includes('jobs.lever.co') || hasElement;
   },
 
   async fill(profile, serverUrl) {
@@ -24,7 +30,7 @@ window.ATSLever = {
     ];
 
     for (const item of fieldMap) {
-      const el = document.querySelector(item.selector);
+      const el = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep(item.selector, document) : document.querySelector(item.selector);
       if (el) {
         // Tag element with exact structured DB key for Case A sync
         el.setAttribute('data-ats-field-key', item.key);
@@ -42,7 +48,7 @@ window.ATSLever = {
       }
     }
 
-    const fileInput = document.querySelector('input[type="file"][name="resume"]');
+    const fileInput = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep('input[type="file"][name="resume"]', document) : document.querySelector('input[type="file"][name="resume"]');
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;

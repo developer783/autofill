@@ -4,7 +4,13 @@ window.ATSGreenhouse = {
   atsName: 'Greenhouse',
 
   detect(url, doc) {
-    return url.includes('greenhouse.io') || doc.querySelector('#grnhse_app, form#application_form, [action*="greenhouse"]') !== null;
+    const currentDoc = doc || document;
+    const currentUrl = url || window.location.href;
+    const hasElement = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('#grnhse_app, form#application_form, [action*="greenhouse"], iframe[src*="greenhouse"]', currentDoc) !== null
+      : currentDoc.querySelector('#grnhse_app, form#application_form, [action*="greenhouse"]') !== null;
+
+    return currentUrl.includes('greenhouse.io') || currentUrl.includes('boards.greenhouse.io') || hasElement;
   },
 
   async fill(profile, serverUrl) {
@@ -31,7 +37,7 @@ window.ATSGreenhouse = {
     ];
 
     for (const item of fieldMap) {
-      const el = document.querySelector(item.selector);
+      const el = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep(item.selector, document) : document.querySelector(item.selector);
       if (el) {
         // Tag element with exact structured DB key for Case A sync
         el.setAttribute('data-ats-field-key', item.key);
@@ -67,7 +73,7 @@ window.ATSGreenhouse = {
     }
 
     // Greenhouse Resume Attachment
-    const fileInput = document.querySelector('input[type="file"][name*="resume"], #resume_file');
+    const fileInput = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep('input[type="file"][name*="resume"], #resume_file', document) : document.querySelector('input[type="file"][name*="resume"], #resume_file');
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;

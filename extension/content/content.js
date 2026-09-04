@@ -21,7 +21,15 @@
 
       (async () => {
         try {
+          // Wait for dynamic elements / DOM stabilization before scanning fields
+          if (window.ATSHelpers && typeof window.ATSHelpers.waitForDOM === 'function') {
+            await window.ATSHelpers.waitForDOM(document, 1500);
+          }
+
           const currentUrl = window.location.href;
+          const detectedFields = window.ATSHelpers ? window.ATSHelpers.querySelectorAllDeep('input, select, textarea, [role="combobox"]') : document.querySelectorAll('input, select, textarea');
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Total form field count detected (including Shadow DOM):', detectedFields.length);
+
           let matchedAdapter = null;
 
           const allAdapters = [

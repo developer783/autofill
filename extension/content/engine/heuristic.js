@@ -87,7 +87,9 @@ window.ATSHeuristic = {
       atsName: 'Generic ATS (Tier 2 AI / Tier 3 Heuristic)'
     };
 
-    const rawElements = Array.from(document.querySelectorAll('input, select, textarea, [role="combobox"]'));
+    const rawElements = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorAllDeep('input, select, textarea, [role="combobox"]', document)
+      : Array.from(document.querySelectorAll('input, select, textarea, [role="combobox"]'));
     const candidateInputs = [];
 
     // Filter candidate input elements and collect field metadata

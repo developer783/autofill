@@ -4,7 +4,13 @@ window.ATSiCIMS = {
   atsName: 'iCIMS',
 
   detect(url, doc) {
-    return url.includes('icims.com') || doc.querySelector('[class*="icims"], iframe[id*="icims"]') !== null;
+    const currentDoc = doc || document;
+    const currentUrl = url || window.location.href;
+    const hasElement = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('[class*="icims"], iframe[id*="icims"], [id*="icims"]', currentDoc) !== null
+      : currentDoc.querySelector('[class*="icims"], iframe[id*="icims"]') !== null;
+
+    return currentUrl.includes('icims.com') || hasElement;
   },
 
   async fill(profile, serverUrl) {
@@ -13,17 +19,17 @@ window.ATSiCIMS = {
     const files = profile.files || {};
 
     const fieldMap = [
-      { selector: 'input[id$="_FirstName"], input[name$="FirstName"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
-      { selector: 'input[id$="_LastName"], input[name$="LastName"]', value: d.family_name, key: 'details.family_name', label: 'Last Name' },
-      { selector: 'input[id$="_Email"], input[name$="Email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
-      { selector: 'input[id$="_Phone"], input[name$="Phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
-      { selector: 'input[id$="_AddressLine1"], input[name$="AddressLine1"]', value: d.address_line_1, key: 'details.address_line_1', label: 'Address' },
-      { selector: 'input[id$="_City"], input[name$="City"]', value: d.city, key: 'details.city', label: 'City' },
-      { selector: 'input[id$="_PostalCode"], input[name$="PostalCode"]', value: d.postal_code, key: 'details.postal_code', label: 'Postal Code' }
+      { selector: 'input[id$="_FirstName"], input[name$="FirstName"], input[name="FirstName"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
+      { selector: 'input[id$="_LastName"], input[name$="LastName"], input[name="LastName"]', value: d.family_name, key: 'details.family_name', label: 'Last Name' },
+      { selector: 'input[id$="_Email"], input[name$="Email"], input[name="Email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
+      { selector: 'input[id$="_Phone"], input[name$="Phone"], input[name="Phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
+      { selector: 'input[id$="_AddressLine1"], input[name$="AddressLine1"], input[name="AddressLine1"]', value: d.address_line_1, key: 'details.address_line_1', label: 'Address' },
+      { selector: 'input[id$="_City"], input[name$="City"], input[name="City"]', value: d.city, key: 'details.city', label: 'City' },
+      { selector: 'input[id$="_PostalCode"], input[name$="PostalCode"], input[name="PostalCode"]', value: d.postal_code, key: 'details.postal_code', label: 'Postal Code' }
     ];
 
     for (const item of fieldMap) {
-      const el = document.querySelector(item.selector);
+      const el = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep(item.selector, document) : document.querySelector(item.selector);
       if (el) {
         el.setAttribute('data-ats-field-key', item.key);
 
@@ -40,7 +46,7 @@ window.ATSiCIMS = {
       }
     }
 
-    const fileInput = document.querySelector('input[type="file"][id*="Resume"]');
+    const fileInput = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep('input[type="file"][id*="Resume"], input[type="file"][name*="Resume"], input[type="file"]', document) : document.querySelector('input[type="file"][id*="Resume"]');
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;

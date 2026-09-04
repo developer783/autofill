@@ -4,11 +4,19 @@ window.ATSWorkday = {
   atsName: 'Workday',
 
   detect(url, doc) {
-    return url.includes('myworkdayjobs.com') || url.includes('workday.com') || doc.querySelector('[data-automation-id="workdayApplication"], [data-automation-id="pageHeader"]') !== null;
+    const currentDoc = doc || document;
+    const currentUrl = url || window.location.href;
+    const hasElement = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('[data-automation-id="workdayApplication"], [data-automation-id="pageHeader"], [data-automation-id*="legalName"]', currentDoc) !== null
+      : currentDoc.querySelector('[data-automation-id="workdayApplication"], [data-automation-id="pageHeader"]') !== null;
+
+    return currentUrl.includes('myworkdayjobs.com') || currentUrl.includes('workday.com') || hasElement;
   },
 
   detectStep(doc) {
-    const stepHeader = doc.querySelector('[data-automation-id="pageHeader"], h2, header');
+    const stepHeader = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('[data-automation-id="pageHeader"], h2, header', doc)
+      : doc.querySelector('[data-automation-id="pageHeader"], h2, header');
     const title = stepHeader ? stepHeader.textContent.toLowerCase() : '';
 
     if (title.includes('information') || title.includes('contact')) return 'my_information';
@@ -20,7 +28,9 @@ window.ATSWorkday = {
 
   traverseDocuments(mainDoc, callback) {
     callback(mainDoc);
-    const iframes = mainDoc.querySelectorAll('iframe');
+    const iframes = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorAllDeep('iframe', mainDoc)
+      : mainDoc.querySelectorAll('iframe');
     for (const iframe of iframes) {
       try {
         const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -39,22 +49,25 @@ window.ATSWorkday = {
       console.log(`[Workday Adapter] Detected step: ${step}`);
 
       const workdaySelectors = [
-        { selector: '[data-automation-id="legalNameSection_firstName"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
-        { selector: '[data-automation-id="legalNameSection_lastName"]', value: d.family_name, key: 'details.family_name', label: 'Last Name' },
-        { selector: '[data-automation-id="addressSection_addressLine1"]', value: d.address_line_1, key: 'details.address_line_1', label: 'Address' },
-        { selector: '[data-automation-id="addressSection_city"]', value: d.city, key: 'details.city', label: 'City' },
-        { selector: '[data-automation-id="addressSection_postalCode"]', value: d.postal_code, key: 'details.postal_code', label: 'Postal Code' },
-        { selector: '[data-automation-id="email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
-        { selector: '[data-automation-id="phone-number"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
-        { selector: '[data-automation-id="linkedin-url"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
-        { selector: '[data-automation-id="gender"]', value: d.gender, key: 'details.gender', label: 'Gender' },
-        { selector: '[data-automation-id="ethnicity"]', value: d.ethnicity, key: 'details.ethnicity', label: 'Ethnicity' },
-        { selector: '[data-automation-id="veteranStatus"]', value: d.protected_veteran_status, key: 'details.protected_veteran_status', label: 'Veteran Status' },
-        { selector: '[data-automation-id="disabilityStatus"]', value: d.disability_status, key: 'details.disability_status', label: 'Disability Status' }
+        { selector: '[data-automation-id="legalNameSection_firstName"], input[id*="firstName"], input[name*="firstName"]', value: d.given_names, key: 'details.given_names', label: 'First Name' },
+        { selector: '[data-automation-id="legalNameSection_lastName"], input[id*="lastName"], input[name*="lastName"]', value: d.family_name, key: 'details.family_name', label: 'Last Name' },
+        { selector: '[data-automation-id="addressSection_addressLine1"], input[id*="addressLine1"], input[name*="addressLine1"]', value: d.address_line_1, key: 'details.address_line_1', label: 'Address' },
+        { selector: '[data-automation-id="addressSection_city"], input[id*="city"], input[name*="city"]', value: d.city, key: 'details.city', label: 'City' },
+        { selector: '[data-automation-id="addressSection_postalCode"], input[id*="postalCode"], input[name*="postalCode"]', value: d.postal_code, key: 'details.postal_code', label: 'Postal Code' },
+        { selector: '[data-automation-id="email"], input[type="email"], input[id*="email"]', value: d.email_address, key: 'details.email_address', label: 'Email' },
+        { selector: '[data-automation-id="phone-number"], input[type="tel"], input[id*="phone"]', value: d.phone_number, key: 'details.phone_number', label: 'Phone' },
+        { selector: '[data-automation-id="linkedin-url"], input[name*="linkedin"], input[id*="linkedin"]', value: d.linkedin_url, key: 'details.linkedin_url', label: 'LinkedIn' },
+        { selector: '[data-automation-id="gender"], select[name*="gender"], select[id*="gender"]', value: d.gender, key: 'details.gender', label: 'Gender' },
+        { selector: '[data-automation-id="ethnicity"], select[name*="ethnicity"], select[id*="race"]', value: d.ethnicity, key: 'details.ethnicity', label: 'Ethnicity' },
+        { selector: '[data-automation-id="veteranStatus"], select[name*="veteran"], select[id*="veteran"]', value: d.protected_veteran_status, key: 'details.protected_veteran_status', label: 'Veteran Status' },
+        { selector: '[data-automation-id="disabilityStatus"], select[name*="disability"], select[id*="disability"]', value: d.disability_status, key: 'details.disability_status', label: 'Disability Status' }
       ];
 
       for (const item of workdaySelectors) {
-        const el = doc.querySelector(item.selector);
+        const el = window.ATSHelpers
+          ? window.ATSHelpers.querySelectorDeep(item.selector, doc)
+          : doc.querySelector(item.selector);
+
         if (el) {
           el.setAttribute('data-ats-field-key', item.key);
 
@@ -62,6 +75,8 @@ window.ATSWorkday = {
             let ok = false;
             if (el.getAttribute('role') === 'combobox') {
               ok = await window.ATSHelpers.setCustomComboboxValue(el, item.value);
+            } else if (el.tagName === 'SELECT') {
+              ok = window.ATSHelpers.setSelectValue(el, item.value);
             } else {
               ok = window.ATSHelpers.setInputValue(el, item.value);
             }
@@ -77,7 +92,10 @@ window.ATSWorkday = {
         }
       }
 
-      const fileInput = doc.querySelector('[data-automation-id="file-upload-drop-zone"] input[type="file"], input[type="file"]');
+      const fileInput = window.ATSHelpers
+        ? window.ATSHelpers.querySelectorDeep('[data-automation-id="file-upload-drop-zone"] input[type="file"], input[type="file"]', doc)
+        : doc.querySelector('[data-automation-id="file-upload-drop-zone"] input[type="file"], input[type="file"]');
+
       if (fileInput) {
         fileInput.setAttribute('data-ats-field-key', 'resume');
         const resumeMeta = files.resume;

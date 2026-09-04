@@ -21,6 +21,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
+      "all_frames": true,
       "js": [
         "content/engine/utils.js",
         "content/engine/heuristic.js",
