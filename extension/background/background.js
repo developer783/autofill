@@ -61,6 +61,49 @@ async function fetchFullProfileJIT(profileId) {
   }
 }
 
+// Helper to send message to active tab with programmatic script injection fallback if content script is not yet attached
+async function sendMessageToTabWithFallback(tabId, message) {
+  const attemptSend = () => new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+      } else {
+        resolve(response);
+      }
+    });
+  });
+
+  try {
+    return await attemptSend();
+  } catch (err) {
+    console.log('[Smart Autofill Background] Connection error, attempting programmatic script injection:', err.message);
+
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        files: [
+          "content/engine/utils.js",
+          "content/engine/heuristic.js",
+          "content/adapters/greenhouse.js",
+          "content/adapters/lever.js",
+          "content/adapters/workday.js",
+          "content/adapters/icims.js",
+          "content/adapters/smartrecruiters.js",
+          "content/adapters/ashby.js",
+          "content/content.js"
+        ]
+      });
+
+      // Small delay for content script listeners to settle
+      await new Promise(r => setTimeout(r, 150));
+
+      return await attemptSend();
+    } catch (injErr) {
+      throw new Error('Could not communicate with page content script. Please refresh the tab and try again.');
+    }
+  }
+}
+
 // Message Listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_PROFILES') {
@@ -84,22 +127,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           throw new Error('No active browser tab found');
         }
 
-        // 3. Send message to content script in active tab
-        const result = await new Promise((resolve, reject) => {
-          chrome.tabs.sendMessage(tab.id, {
-            type: 'START_AUTOFILL',
-            profile: profileData,
-            serverUrl
-          }, (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message || 'Could not communicate with page content script. Try refreshing the job page.'));
-            } else if (response && response.error) {
-              reject(new Error(response.error));
-            } else {
-              resolve(response);
-            }
-          });
+        // 3. Send message to content script in active tab (with auto-injection fallback)
+        const result = await sendMessageToTabWithFallback(tab.id, {
+          type: 'START_AUTOFILL',
+          profile: profileData,
+          serverUrl
         });
+
+        if (result && result.error) {
+          throw new Error(result.error);
+        }
 
         // 4. Wipe full candidate PII from service worker memory immediately!
         profileData = null;

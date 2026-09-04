@@ -4,7 +4,13 @@ window.ATSSmartRecruiters = {
   atsName: 'SmartRecruiters',
 
   detect(url, doc) {
-    return url.includes('smartrecruiters.com') || doc.querySelector('[st-component="apply-form"], form[action*="smartrecruiters"]') !== null;
+    const currentDoc = doc || document;
+    const currentUrl = url || window.location.href;
+    const hasElement = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('[st-component="apply-form"], form[action*="smartrecruiters"]', currentDoc) !== null
+      : currentDoc.querySelector('[st-component="apply-form"], form[action*="smartrecruiters"]') !== null;
+
+    return currentUrl.includes('smartrecruiters.com') || hasElement;
   },
 
   async fill(profile, serverUrl) {
@@ -23,7 +29,7 @@ window.ATSSmartRecruiters = {
     ];
 
     for (const item of fieldMap) {
-      const el = document.querySelector(item.selector);
+      const el = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep(item.selector, document) : document.querySelector(item.selector);
       if (el) {
         el.setAttribute('data-ats-field-key', item.key);
 
@@ -40,7 +46,7 @@ window.ATSSmartRecruiters = {
       }
     }
 
-    const fileInput = document.querySelector('input[type="file"][id*="resume"], input[type="file"][name="file"]');
+    const fileInput = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep('input[type="file"][id*="resume"], input[type="file"][name="file"]', document) : document.querySelector('input[type="file"][id*="resume"], input[type="file"][name="file"]');
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;

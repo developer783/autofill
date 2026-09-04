@@ -4,7 +4,13 @@ window.ATSAshby = {
   atsName: 'Ashby',
 
   detect(url, doc) {
-    return url.includes('ashbyhq.com') || doc.querySelector('[class*="ashby"], [id*="ashby"]') !== null;
+    const currentDoc = doc || document;
+    const currentUrl = url || window.location.href;
+    const hasElement = window.ATSHelpers
+      ? window.ATSHelpers.querySelectorDeep('[class*="ashby"], [id*="ashby"]', currentDoc) !== null
+      : currentDoc.querySelector('[class*="ashby"], [id*="ashby"]') !== null;
+
+    return currentUrl.includes('ashbyhq.com') || hasElement;
   },
 
   async fill(profile, serverUrl) {
@@ -22,7 +28,7 @@ window.ATSAshby = {
     ];
 
     for (const item of fieldMap) {
-      const el = document.querySelector(item.selector);
+      const el = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep(item.selector, document) : document.querySelector(item.selector);
       if (el) {
         el.setAttribute('data-ats-field-key', item.key);
 
@@ -39,7 +45,7 @@ window.ATSAshby = {
       }
     }
 
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = window.ATSHelpers ? window.ATSHelpers.querySelectorDeep('input[type="file"]', document) : document.querySelector('input[type="file"]');
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
