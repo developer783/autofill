@@ -64,6 +64,7 @@ function setupDOM(html, url = 'https://example.com') {
   // Polyfill fetch and DataTransfer for file blob downloading in test env
   window.fetch = async () => ({
     ok: true,
+    json: async () => ({ matches: {} }),
     blob: async () => new window.Blob(['dummy content'], { type: 'application/pdf' })
   });
 
@@ -344,6 +345,85 @@ async function runTests() {
     console.log(`✓ Greenhouse Test (Iframe): Detected=${isDetected}, Filled=${stats.filled.length}/${totalFillable}, Correctness=${pct}% (${correctCount}/${totalFillable})`);
   }
 
+  // ----------------------------------------------------
+  // TEST 5: 3 URGENT FIXES VERIFICATION (Dropdowns, Base64 Files, URL Normalization, Silent Learned Fields)
+  // ----------------------------------------------------
+  {
+    const customHtml = `
+      <!DOCTYPE html>
+      <html>
+      <body>
+        <form id="custom-test-form">
+          <label for="work_auth_select">Are you authorized to work?</label>
+          <select id="work_auth_select">
+            <option value="">Select Authorization</option>
+            <option value="yes_authorized">Yes</option>
+            <option value="no_authorized">No</option>
+          </select>
+          <div id="gender_combobox" role="combobox" aria-label="Gender Identity">
+            <span class="combobox-value">Select</span>
+            <ul role="listbox">
+              <li role="option" data-value="Female">Female</li>
+              <li role="option" data-value="Male">Male</li>
+            </ul>
+          </div>
+          <input id="portfolio_url_input" type="url" name="portfolio" placeholder="Portfolio URL" />
+          <input id="custom_learned_field_input" type="text" name="favorite_tool" />
+          <label for="custom_learned_field_input">Favorite Development Tool</label>
+          <input type="file" id="custom_resume_input" />
+        </form>
+      </body>
+      </html>
+    `;
+
+    const dom = setupDOM(customHtml, 'https://example.com/apply');
+    const { window } = dom;
+    const document = window.document;
+
+    const testProfile = {
+      ...sampleProfile,
+      learned_fields: [
+        {
+          ats_domain: 'example.com',
+          field_label_text: 'Favorite Development Tool',
+          field_value: 'VS Code'
+        }
+      ],
+      files: {
+        resume: {
+          filename: 'Jane_Doe_Resume.pdf',
+          data_url: 'data:application/pdf;base64,SGVsbG8gV29ybGQ=',
+          mimetype: 'application/pdf'
+        }
+      }
+    };
+
+    // Run Heuristic Engine
+    const stats = await window.ATSHeuristic.run(testProfile, 'http://localhost:8000');
+
+    // Verify Dropdown <select>
+    const selectEl = document.getElementById('work_auth_select');
+    const selectFilled = selectEl && selectEl.value === 'yes_authorized';
+
+    // Verify URL Normalization
+    const urlEl = document.getElementById('portfolio_url_input');
+    window.ATSHelpers.setInputValue(urlEl, 'janedoe.dev');
+    const urlNormalized = urlEl && urlEl.value === 'https://janedoe.dev';
+
+    // Verify Learned Field
+    const learnedEl = document.getElementById('custom_learned_field_input');
+    const learnedFilled = learnedEl && learnedEl.value === 'VS Code';
+
+    // Verify Base64 File Attachment
+    const fileEl = document.getElementById('custom_resume_input');
+    const base64Attached = await window.ATSHelpers.setFileInput(fileEl, testProfile.files.resume.data_url, testProfile.files.resume.filename, testProfile.files.resume.mimetype);
+
+    const fixesPass = selectFilled && urlNormalized && learnedFilled && base64Attached;
+    results['3_Urgent_Fixes'] = { detected: true, total: 4, filled: 4, correct: fixesPass ? 4 : 0, percentage: fixesPass ? 100 : 0 };
+
+    console.log(`✓ 3 Urgent Fixes Test: DropdownSelect=${selectFilled}, UrlNormalized=${urlNormalized}, LearnedField=${learnedFilled}, Base64File=${base64Attached} -> ${fixesPass ? 'PASS (100%)' : 'FAIL'}`);
+  }
+
   console.log('\n====================================================');
   console.log('  FINAL VERIFICATION SUMMARY');
   console.log('====================================================');
@@ -358,7 +438,7 @@ async function runTests() {
     console.error('\n❌ Test suite failed accuracy requirements!');
     process.exit(1);
   } else {
-    console.log('\n🎉 ALL 4 ATS PLATFORMS PASSED WITH >= 80% ACCURACY!');
+    console.log('\n🎉 ALL 4 ATS PLATFORMS + 3 URGENT FIXES PASSED WITH >= 80% ACCURACY!');
   }
 }
 

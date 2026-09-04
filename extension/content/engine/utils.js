@@ -78,11 +78,27 @@ window.ATSHelpers = {
     });
   },
 
+  // Normalize URL strings to include https:// scheme prefix
+  normalizeUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  },
+
   // Controlled input value setter for React / Vue / Angular apps
   setInputValue(element, value) {
     if (!element || value === undefined || value === null) return false;
-    const strVal = String(value);
+    let strVal = String(value);
     if (!strVal.trim()) return false;
+
+    // Normalize URL fields if scheme is missing
+    if (element.type === 'url' || (element.name && element.name.toLowerCase().includes('url'))) {
+      strVal = this.normalizeUrl(strVal);
+    }
 
     let prototype = window.HTMLInputElement.prototype;
     if (element.tagName === 'TEXTAREA') {
@@ -93,8 +109,15 @@ window.ATSHelpers = {
 
     const valueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
     if (valueSetter) {
-      valueSetter.call(element, strVal);
+      try {
+        valueSetter.call(element, strVal);
+      } catch (e) {
+        element.value = strVal;
+      }
     } else {
+      element.value = strVal;
+    }
+    if (element.value !== strVal) {
       element.value = strVal;
     }
 
@@ -104,7 +127,7 @@ window.ATSHelpers = {
     return true;
   },
 
-  // Select dropdown option matcher (with boolean conversion, fuzzy matching, and ATS synonyms)
+  // Select dropdown option matcher (with boolean conversion, fuzzy matching, and native descriptor setter)
   setSelectValue(selectEl, value) {
     if (!selectEl || value === undefined || value === null) return false;
 
@@ -123,7 +146,7 @@ window.ATSHelpers = {
     for (const searchVal of searchVals) {
       if (!searchVal) continue;
 
-      // Pass 1: Exact match
+      // Pass 1: Exact match on option value or text (case-insensitive, trimmed)
       for (let i = 0; i < selectEl.options.length; i++) {
         const opt = selectEl.options[i];
         const optVal = opt.value.toLowerCase().trim();
@@ -171,8 +194,25 @@ window.ATSHelpers = {
 
     if (bestMatchIndex !== -1) {
       selectEl.selectedIndex = bestMatchIndex;
-      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      if (selectEl.options[bestMatchIndex]) {
+        selectEl.options[bestMatchIndex].selected = true;
+      }
+      const targetVal = selectEl.options[bestMatchIndex]?.value;
+
+      let prototype = window.HTMLSelectElement.prototype;
+      const valueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+      if (valueSetter && targetVal !== undefined) {
+        try {
+          valueSetter.call(selectEl, targetVal);
+        } catch (e) {
+          selectEl.value = targetVal;
+        }
+      } else if (targetVal !== undefined) {
+        selectEl.value = targetVal;
+      }
+
       selectEl.dispatchEvent(new Event('input', { bubbles: true }));
+      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
       selectEl.dispatchEvent(new Event('blur', { bubbles: true }));
       return true;
     }
@@ -254,21 +294,47 @@ window.ATSHelpers = {
     return false;
   },
 
-  // File Upload Assigner (DataTransfer + File object + Dropzone dispatches)
-  async setFileInput(fileInput, fileBlobUrl, filename, mimetype) {
-    if (!fileInput || !fileBlobUrl) return false;
+  // File Upload Assigner (Supports Base64 Data URL from background worker & Blob URL)
+  async setFileInput(fileInput, fileBlobOrDataUrl, filename, mimetype) {
+    if (!fileInput || !fileBlobOrDataUrl) return false;
 
     try {
-      const res = await fetch(fileBlobUrl);
-      if (!res.ok) return false;
+      let blob = null;
 
-      const blob = await res.blob();
+      if (fileBlobOrDataUrl.startsWith('data:')) {
+        // Base64 Data URL fetched by background service worker (CORS/CSP proof!)
+        const parts = fileBlobOrDataUrl.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : (mimetype || 'application/pdf');
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        blob = new Blob([u8arr], { type: mime });
+      } else {
+        const res = await fetch(fileBlobOrDataUrl);
+        if (!res.ok) return false;
+        blob = await res.blob();
+      }
+
       const file = new File([blob], filename || 'resume.pdf', { type: mimetype || 'application/pdf' });
 
       if (typeof DataTransfer !== 'undefined') {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        fileInput.files = dataTransfer.files;
+        try {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          fileInput.files = dataTransfer.files;
+        } catch (dtErr) {
+          try {
+            Object.defineProperty(fileInput, 'files', {
+              value: [file],
+              writable: true,
+              configurable: true
+            });
+          } catch (e) {}
+        }
       }
 
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -295,7 +361,8 @@ window.ATSHelpers = {
     // 1. Check explicit <label for="...">
     if (el.id) {
       try {
-        const explicitLabel = this.querySelectorDeep(`label[for="${CSS.escape(el.id)}"]`, rootDoc);
+        const safeId = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(el.id) : el.id;
+        const explicitLabel = this.querySelectorDeep(`label[for="${safeId}"]`, rootDoc);
         if (explicitLabel) return explicitLabel.textContent.trim();
       } catch (e) {}
     }

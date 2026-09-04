@@ -92,8 +92,8 @@ window.ATSHeuristic = {
     };
 
     const rawElements = window.ATSHelpers
-      ? window.ATSHelpers.querySelectorAllDeep('input, select, textarea, [role="combobox"]', document)
-      : Array.from(document.querySelectorAll('input, select, textarea, [role="combobox"]'));
+      ? window.ATSHelpers.querySelectorAllDeep('input, select, textarea, [role="combobox"], [role="listbox"]', document)
+      : Array.from(document.querySelectorAll('input, select, textarea, [role="combobox"], [role="listbox"]'));
     const candidateInputs = [];
 
     // Filter candidate input elements and collect field metadata
@@ -166,7 +166,14 @@ window.ATSHeuristic = {
       // Check Learned Fields first (label-text match)
       const learnedMatch = this.matchLearnedFields(labelText, profile.learned_fields);
       if (learnedMatch && learnedMatch.field_value) {
-        const success = window.ATSHelpers.setInputValue(el, learnedMatch.field_value);
+        let success = false;
+        if (el.tagName === 'SELECT') {
+          success = window.ATSHelpers.setSelectValue(el, learnedMatch.field_value);
+        } else if (el.getAttribute('role') === 'combobox' || el.getAttribute('role') === 'listbox') {
+          success = await window.ATSHelpers.setCustomComboboxValue(el, learnedMatch.field_value);
+        } else {
+          success = window.ATSHelpers.setInputValue(el, learnedMatch.field_value);
+        }
         if (success) {
           console.log('[Smart Autofill] Field filled via Learned Field:', labelText);
           stats.filled.push({ label: labelText || 'Learned Field', key: 'learned_field' });
@@ -210,9 +217,11 @@ window.ATSHeuristic = {
 
           if (el.type === 'file') {
             const fileMeta = profile.files ? profile.files.resume : null;
-            if (fileMeta && fileMeta.download_url) {
-              const fullBlobUrl = `${serverUrl}${fileMeta.download_url}`;
-              success = await window.ATSHelpers.setFileInput(el, fullBlobUrl, fileMeta.filename, fileMeta.mimetype);
+            if (fileMeta) {
+              const fileDataOrUrl = fileMeta.data_url || (fileMeta.download_url ? `${serverUrl}${fileMeta.download_url}` : null);
+              if (fileDataOrUrl) {
+                success = await window.ATSHelpers.setFileInput(el, fileDataOrUrl, fileMeta.filename, fileMeta.mimetype);
+              }
             }
           } else if (el.type === 'checkbox') {
             el.checked = Boolean(valueToFill);

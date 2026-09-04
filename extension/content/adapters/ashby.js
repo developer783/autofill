@@ -49,14 +49,26 @@ window.ATSAshby = {
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
-      if (resumeMeta && resumeMeta.download_url) {
-        const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
-        if (ok) {
-          stats.filled.push({ label: 'Resume File', key: 'resume' });
+      if (resumeMeta) {
+        const fileDataOrUrl = resumeMeta.data_url || (resumeMeta.download_url ? `${serverUrl}${resumeMeta.download_url}` : null);
+        if (fileDataOrUrl) {
+          const ok = await window.ATSHelpers.setFileInput(fileInput, fileDataOrUrl, resumeMeta.filename, resumeMeta.mimetype);
+          if (ok) {
+            stats.filled.push({ label: 'Resume File', key: 'resume' });
+          }
         }
       } else {
         stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'No resume attached (untouched)' });
+      }
+    }
+
+    // Sweep remaining unmapped fields (dropdowns, custom questions, learned fields) via Heuristic Engine
+    if (window.ATSHeuristic && typeof window.ATSHeuristic.run === 'function') {
+      const extraStats = await window.ATSHeuristic.run(profile, serverUrl);
+      if (extraStats) {
+        stats.filled.push(...(extraStats.filled || []));
+        stats.left_empty.push(...(extraStats.left_empty || []));
+        stats.skipped.push(...(extraStats.skipped || []));
       }
     }
 

@@ -27,8 +27,15 @@
           }
 
           const currentUrl = window.location.href;
-          const detectedFields = window.ATSHelpers ? window.ATSHelpers.querySelectorAllDeep('input, select, textarea, [role="combobox"]') : document.querySelectorAll('input, select, textarea');
+          const detectedFields = window.ATSHelpers ? window.ATSHelpers.querySelectorAllDeep('input, select, textarea, [role="combobox"], [role="listbox"]', document) : document.querySelectorAll('input, select, textarea, [role="combobox"], [role="listbox"]');
           console.log('[Smart Autofill] [Step 2 Diagnostic] Total form field count detected (including Shadow DOM):', detectedFields.length);
+          detectedFields.forEach((el, index) => {
+            const tag = el.tagName ? el.tagName.toLowerCase() : '';
+            const type = el.type || '';
+            const role = el.getAttribute ? el.getAttribute('role') || '' : '';
+            const label = window.ATSHelpers ? window.ATSHelpers.getElementLabelText(el) : '';
+            console.log(`[Smart Autofill] Candidate field #${index + 1}: tag=${tag}, type=${type}, role=${role}, label="${label}"`);
+          });
 
           let matchedAdapter = null;
 

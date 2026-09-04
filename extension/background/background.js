@@ -41,7 +41,7 @@ async function fetchProfileList() {
   }
 }
 
-// Fetch JIT full profile for active fill execution
+// Fetch JIT full profile for active fill execution (plus background fetch of resume file blob as Base64 Data URL)
 async function fetchFullProfileJIT(profileId) {
   const { serverUrl } = await getSettings();
   if (!serverUrl || !serverUrl.trim()) {
@@ -55,6 +55,26 @@ async function fetchFullProfileJIT(profileId) {
       throw new Error('Failed to load candidate profile details from server');
     }
     const profileData = await response.json();
+
+    // Background fetch resume file to bypass page CSP / CORS rules
+    if (profileData.files && profileData.files.resume && profileData.files.resume.download_url) {
+      try {
+        const fileUrl = `${cleanServerUrl}${profileData.files.resume.download_url}`;
+        const fileRes = await fetch(fileUrl);
+        if (fileRes.ok) {
+          const blob = await fileRes.blob();
+          const base64Data = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          profileData.files.resume.data_url = base64Data;
+        }
+      } catch (fileErr) {
+        console.warn('[Smart Autofill Background] Resume file fetch warning:', fileErr);
+      }
+    }
+
     return { profileData, serverUrl: cleanServerUrl };
   } catch (err) {
     throw new Error("Can't reach server — check the URL in Settings");

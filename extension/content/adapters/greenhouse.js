@@ -77,18 +77,20 @@ window.ATSGreenhouse = {
     if (fileInput) {
       fileInput.setAttribute('data-ats-field-key', 'resume');
       const resumeMeta = files.resume;
-      if (resumeMeta && resumeMeta.download_url) {
-        const fullBlobUrl = `${serverUrl}${resumeMeta.download_url}`;
-        const ok = await window.ATSHelpers.setFileInput(fileInput, fullBlobUrl, resumeMeta.filename, resumeMeta.mimetype);
-        const outcomeState = ok ? 'matched-and-filled' : 'matched-but-no-data';
-        console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) resume field attempt:', {
-          label: 'Attach Resume', name: fileInput.name, id: fileInput.id, type: 'file',
-          matchedKey: 'resume', outcomeState, filename: resumeMeta.filename
-        });
-        if (ok) {
-          stats.filled.push({ label: 'Resume File', key: 'resume' });
-        } else {
-          stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'File error' });
+      if (resumeMeta) {
+        const fileDataOrUrl = resumeMeta.data_url || (resumeMeta.download_url ? `${serverUrl}${resumeMeta.download_url}` : null);
+        if (fileDataOrUrl) {
+          const ok = await window.ATSHelpers.setFileInput(fileInput, fileDataOrUrl, resumeMeta.filename, resumeMeta.mimetype);
+          const outcomeState = ok ? 'matched-and-filled' : 'matched-but-no-data';
+          console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) resume field attempt:', {
+            label: 'Attach Resume', name: fileInput.name, id: fileInput.id, type: 'file',
+            matchedKey: 'resume', outcomeState, filename: resumeMeta.filename
+          });
+          if (ok) {
+            stats.filled.push({ label: 'Resume File', key: 'resume' });
+          } else {
+            stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'File error' });
+          }
         }
       } else {
         console.log('[Smart Autofill] [Step 2 Diagnostic] Adapter (Greenhouse) resume field attempt:', {
@@ -96,6 +98,16 @@ window.ATSGreenhouse = {
           matchedKey: 'resume', outcomeState: 'matched-but-no-data', reason: 'No resume uploaded'
         });
         stats.left_empty.push({ label: 'Resume File', key: 'resume', reason: 'No resume uploaded (untouched)' });
+      }
+    }
+
+    // Sweep remaining unmapped fields (dropdowns, custom questions, learned fields) via Heuristic Engine
+    if (window.ATSHeuristic && typeof window.ATSHeuristic.run === 'function') {
+      const extraStats = await window.ATSHeuristic.run(profile, serverUrl);
+      if (extraStats) {
+        stats.filled.push(...(extraStats.filled || []));
+        stats.left_empty.push(...(extraStats.left_empty || []));
+        stats.skipped.push(...(extraStats.skipped || []));
       }
     }
 
